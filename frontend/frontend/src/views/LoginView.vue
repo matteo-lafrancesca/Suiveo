@@ -14,7 +14,7 @@
         Connexion
       </h2>
 
-      <v-form @submit.prevent="login">
+      <v-form @submit.prevent="handleLogin">
         <v-text-field
           v-model="email"
           label="Adresse e-mail"
@@ -41,17 +41,63 @@
           rounded="lg"
           size="large"
           class="font-weight-bold"
+          :loading="loading"
         >
           Se connecter
         </v-btn>
+
+        <p v-if="error" class="text-red mt-4">{{ error }}</p>
       </v-form>
     </v-card>
   </v-sheet>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-const email = ref('')
-const password = ref('')
-const login = () => console.log(email.value, password.value)
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+
+const router = useRouter();
+
+// --------------------
+// Variables réactives
+// --------------------
+const email = ref("");
+const password = ref("");
+const error = ref("");
+const loading = ref(false);
+
+// --------------------
+// Fonction de login
+// --------------------
+const handleLogin = async () => {
+  error.value = "";
+  loading.value = true;
+
+  try {
+    const response = await axios.post("http://127.0.0.1:8000/api/login/", {
+      email: email.value,
+      password: password.value,
+    });
+
+    const { access, refresh, user } = response.data;
+
+    // 🔐 On stocke les tokens et infos utilisateur dans le localStorage
+    localStorage.setItem("access", access);
+    localStorage.setItem("refresh", refresh);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    console.log("✅ Connexion réussie :", user);
+
+    // 🚀 Redirection vers / (le router gérera la redirection vers /dashboard)
+    router.push("/");
+
+  } catch (err) {
+    console.error(err);
+    error.value =
+      err.response?.data?.error || "Email ou mot de passe incorrect.";
+  } finally {
+    loading.value = false;
+  }
+};
 </script>

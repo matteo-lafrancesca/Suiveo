@@ -1,0 +1,15 @@
+- Passer la BDD de sqlite à MySQL
+- Stocker le token JWT en mémoire + cookies HTTPOnly côté API au lieu de localStorage
+- .\venv\Scripts\activate       deactivate
+
+Suiveo/
+├── backend/
+│   ├── db.sqlite3
+│   ├── manage.py
+│   ├── suiveo_api/        
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   ├── asgi.py
+│   │   └── wsgi.py
+│   └── venv/

@@ -24,9 +24,9 @@ const vuetify = createVuetify({
         colors: {
           primary: '#2a4252', 
           secondary: '#a78bfa', 
-          background: '#f8fafc', // Gris très clair
+          background: '#f8fafc',
           surface: '#ffffff', 
-          error: '#ef4444',
+          error: '#d3251fff',
           success: '#22c55e',
         },
       },
