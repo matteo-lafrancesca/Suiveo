@@ -5,7 +5,7 @@ from django.db import models
 
 class Client(models.Model):
     first_name = models.CharField(max_length=50)
-    last_name  = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
 
     class Meta:
         ordering = ["last_name", "first_name"]
@@ -16,7 +16,7 @@ class Client(models.Model):
 
 class Employee(models.Model):
     first_name = models.CharField(max_length=50)
-    last_name  = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
 
     class Meta:
         ordering = ["last_name", "first_name"]
@@ -25,27 +25,27 @@ class Employee(models.Model):
         return f"{self.last_name} {self.first_name}".strip()
 
 
-class BinomeState(models.Model):
-    title = models.CharField(max_length=50, unique=True)
-
-    class Meta:
-        verbose_name = "Binôme - état"
-        verbose_name_plural = "Binômes - états"
-        ordering = ["title"]
-
-    def __str__(self):
-        return self.title
-
-
 # --- Noyau métier -------------------------------------------------------------
 
 class Binome(models.Model):
     """
     Lien entre un client & un intervenant, avec un état et des métadonnées.
     """
+
+    class BinomeState(models.TextChoices):
+        CONFORME = "Conforme", "Conforme"
+        NON_CONFORME = "Non conforme", "Non conforme"
+        A_APPELER = "À appeler", "À appeler"
+        EN_RETARD = "En retard", "En retard"
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="binomes")
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="binomes")
-    state = models.ForeignKey(BinomeState, on_delete=models.PROTECT, related_name="binomes")
+
+    state = models.CharField(
+        max_length=20,
+        choices=BinomeState.choices,
+        default=BinomeState.A_APPELER
+    )
 
     first_intervention_date = models.DateField()
     note = models.TextField(blank=True)
@@ -55,13 +55,11 @@ class Binome(models.Model):
     class Meta:
         verbose_name = "Binôme"
         verbose_name_plural = "Binômes"
-        # Un couple client/employé peut exister plusieurs fois dans l'historique,
-        # mais si tu veux empêcher les doublons en parallèle, dé-commente :
-        # unique_together = (("client", "employee", "state"),)
+        unique_together = (("client", "employee"),)
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.client} × {self.employee}"
+        return f"{self.client} × {self.employee} — {self.state}"
 
 
 class BinomePause(models.Model):

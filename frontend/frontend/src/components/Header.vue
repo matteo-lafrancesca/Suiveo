@@ -2,10 +2,9 @@
   <v-app-bar
     color="white"
     flat
-    height="70"
+    height="80"
     elevation="2"
-    class="position-fixed w-100"
-    style="z-index: 100; top: 0; left: 0;"
+    class="w-100"
   >
     <div
       class="d-flex align-center justify-space-between w-100"
@@ -24,10 +23,12 @@
           <v-btn
             v-for="link in links"
             :key="link.text"
+            :to="link.to"
             variant="text"
             color="primary"
             rounded="lg"
             class="text-body-1 font-weight-bold text-capitalize"
+            router
           >
             {{ link.text }}
           </v-btn>
@@ -49,8 +50,8 @@
 
 <script setup>
 const links = [
-  { text: 'Tableau de Suivi' },
-  { text: 'Planning' },
-  { text: 'Liste de Binômes' },
-]
+  { text: 'Tableau de Suivi', to: '/tableau-suivi' },
+  { text: 'Planning', to: '/planning' },
+  { text: 'Liste de Binômes', to: '/liste-binomes' },
+];
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <v-container class="d-flex flex-column align-center justify-center" style="height: 100vh;">
+  <v-container class="d-flex flex-column align-center justify-center" style="height: 100vh; margin-top: -10vh;">
     <v-card elevation="6" class="pa-8 text-center rounded-xl" width="500">
       <h2 class="text-h5 font-weight-bold mb-4 text-primary">
         Tableau de bord

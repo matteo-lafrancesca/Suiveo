@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import LoginView from "@/views/LoginView.vue";
 import Dashboard from "@/views/Dashboard.vue";
+import TableauSuivi from "@/views/TableauSuivi.vue";
 
 // 🔍 Fonction utilitaire : vérifie si l'utilisateur est connecté
 function isAuthenticated() {
@@ -36,11 +37,15 @@ const routes = [
       else next();
     },
   },
-  // (Optionnel) Si route inconnue → redirige proprement
   {
-    path: "/:pathMatch(.*)*",
-    redirect: "/",
-  },
+    path : "/tableau-suivi",
+    name : "Tableau Suivi",
+    component: TableauSuivi,
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  }
 ];
 
 const router = createRouter({
