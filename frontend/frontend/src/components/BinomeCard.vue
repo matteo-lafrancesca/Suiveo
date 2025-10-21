@@ -1,22 +1,66 @@
 <template>
-  <v-card class="d-flex align-center mb-3 px-3 py-2" color="grey-lighten-3" rounded="lg">
-    <v-avatar size="40" class="me-3" color="blue-lighten-4">
-      <v-icon color="blue-darken-2">mdi-account</v-icon>
+  <v-card
+    :color="cardColor"
+    rounded="xl"
+    class="pa-4 d-flex align-center text-white mx-auto"
+    max-width="380"
+  >
+    <!-- Icône principale -->
+    <v-avatar size="48" color="white" class="mr-4">
+      <v-icon size="28" :color="cardColor">
+        {{ icon }}
+      </v-icon>
     </v-avatar>
+
+    <!-- Nom affiché -->
     <div>
-      <span class="text-body-1 font-weight-medium">
-        {{ binome.client.last_name }} {{ binome.client.first_name }}
-      </span>
-      <div class="text-caption text-grey">{{ binome.employee.first_name }} {{ binome.employee.last_name }}</div>
+      <div class="text-h6 font-weight-bold">
+        {{ displayedName }}
+      </div>
+      <div class="text-caption opacity-80">
+        {{ subtitle }}
+      </div>
     </div>
   </v-card>
 </template>
 
 <script setup>
-defineProps({
-  binome: {
-    type: Object,
-    required: true,
-  },
+import { computed } from "vue";
+
+const props = defineProps({
+  binome: { type: Object, required: true },
+  nextCallType: { type: String, required: false }, // "Client" ou "Employé"
+});
+
+// 🎨 Couleur principale selon le type d’appel
+const cardColor = computed(() => {
+  if (props.nextCallType === "Client") return "primary";
+  if (props.nextCallType === "Employé") return "secondary";
+  return "grey";
+});
+
+// 🎯 Icône selon le type d’appel
+const icon = computed(() => {
+  if (props.nextCallType === "Client") return "mdi-account"; // Client élégant
+  if (props.nextCallType === "Employé") return "mdi-account-tie"; // Employé de maison
+  return "mdi-help-circle";
+});
+
+// 🧠 Nom affiché (Prénom Nom)
+const displayedName = computed(() => {
+  if (props.nextCallType === "Client" && props.binome?.client) {
+    return `${props.binome.client.first_name} ${props.binome.client.last_name}`;
+  }
+  if (props.nextCallType === "Employé" && props.binome?.employee) {
+    return `${props.binome.employee.first_name} ${props.binome.employee.last_name}`;
+  }
+  return "Inconnu";
+});
+
+// 🗒️ Sous-titre explicite
+const subtitle = computed(() => {
+  if (props.nextCallType === "Client") return "Appel client à effectuer";
+  if (props.nextCallType === "Employé") return "Appel intervenant à effectuer";
+  return "";
 });
 </script>

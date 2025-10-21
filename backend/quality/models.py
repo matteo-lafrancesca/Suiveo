@@ -86,9 +86,18 @@ class CallTemplate(models.Model):
     """
     Modèle de programmation d'appels : offset en semaines et récurrence en mois.
     """
+    class CallType(models.TextChoices):
+        CLIENT = "Client", "Client"
+        EMPLOYEE = "Employé", "Employé"
+
     name = models.CharField(max_length=100, unique=True)
     offset_weeks = models.IntegerField(default=0)
     recurrence_months = models.IntegerField(null=True, blank=True)
+    type = models.CharField(
+        max_length=20,
+        choices=CallType.choices,
+        default=CallType.CLIENT
+    )
 
     class Meta:
         verbose_name = "Template d'appel"

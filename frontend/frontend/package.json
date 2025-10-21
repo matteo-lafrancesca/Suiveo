@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
     "@vue/devtools-kit": "7.3.4",
     "axios": "^1.12.2",
     "date-fns": "^4.1.0",

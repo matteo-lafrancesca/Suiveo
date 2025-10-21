@@ -12,12 +12,17 @@
     >
       <!-- SECTION GAUCHE -->
       <div class="d-flex align-center" style="gap: 32px;">
-        <span
-          class="text-h4 font-weight-bold text-primary"
-          style="letter-spacing: 0.5px; padding: 0 16px;"
+        <RouterLink
+          to="/"
+          class="text-decoration-none"
         >
-          Suiveo
-        </span>
+          <span
+            class="text-h4 font-weight-bold text-primary cursor-pointer"
+            style="letter-spacing: 0.5px; padding: 0 16px;"
+          >
+            Suiveo
+          </span>
+        </RouterLink>
 
         <div class="d-flex align-center" style="gap: 8px;">
           <v-btn
