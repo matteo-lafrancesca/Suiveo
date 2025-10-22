@@ -58,5 +58,6 @@ const links = [
   { text: 'Tableau de Suivi', to: '/tableau-suivi' },
   { text: 'Planning', to: '/planning' },
   { text: 'Liste de Binômes', to: '/liste-binomes' },
+  { text: 'Création et Gestion', to: '/creation-gestion' },
 ];
 </script>

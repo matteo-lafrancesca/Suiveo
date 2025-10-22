@@ -2,11 +2,15 @@ import { createRouter, createWebHistory } from "vue-router";
 import LoginView from "@/views/LoginView.vue";
 import Dashboard from "@/views/Dashboard.vue";
 import TableauSuivi from "@/views/TableauSuivi.vue";
+import Binome from "@/views/Binome.vue"; // 👈 nouvelle vue importée
+import Planning from "@/views/Planning.vue";
+import ListeBinome from "@/views/ListeBinome.vue";
+import Gestion from "@/views/Gestion.vue";
 
-// 🔍 Fonction utilitaire : vérifie si l'utilisateur est connecté
+// 🔍 Vérifie si l'utilisateur est connecté
 function isAuthenticated() {
   const token = localStorage.getItem("access");
-  return !!token; // true si token existe, false sinon
+  return !!token;
 }
 
 const routes = [
@@ -21,7 +25,6 @@ const routes = [
     path: "/login",
     name: "Login",
     component: LoginView,
-    // Si déjà connecté → empêche d'aller sur /login
     beforeEnter: (to, from, next) => {
       if (isAuthenticated()) next("/dashboard");
       else next();
@@ -31,21 +34,60 @@ const routes = [
     path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
-    // Si pas connecté → empêche d'aller sur /dashboard
     beforeEnter: (to, from, next) => {
       if (!isAuthenticated()) next("/login");
       else next();
     },
   },
   {
-    path : "/tableau-suivi",
-    name : "Tableau Suivi",
+    path: "/tableau-suivi",
+    name: "TableauSuivi",
     component: TableauSuivi,
     beforeEnter: (to, from, next) => {
       if (!isAuthenticated()) next("/login");
       else next();
     },
-  }
+  },
+  {
+    path: "/binome/:id", // 👈 route dynamique
+    name: "Binome",
+    component: Binome,
+    props: true, // permet de passer automatiquement l'id à la vue
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  },
+  {
+    path: "/planning",
+    name: "Planning",
+    component: Planning,
+    props: true, // permet de passer automatiquement l'id à la vue
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  },
+  {
+    path: "/liste-binomes",
+    name: "Liste Binomes",
+    component: ListeBinome,
+    props: true, // permet de passer automatiquement l'id à la vue
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  },
+    {
+    path: "/creation-gestion",
+    name: "Création Gestion",
+    component: Gestion,
+    props: true, // permet de passer automatiquement l'id à la vue
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  },
 ];
 
 const router = createRouter({

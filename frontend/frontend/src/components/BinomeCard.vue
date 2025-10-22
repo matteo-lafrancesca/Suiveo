@@ -2,8 +2,9 @@
   <v-card
     :color="cardColor"
     rounded="xl"
-    class="pa-4 d-flex align-center text-white mx-auto"
+    class="pa-4 d-flex align-center text-white mx-auto hover-card"
     max-width="380"
+    @click="goToBinome"
   >
     <!-- Icône principale -->
     <v-avatar size="48" color="white" class="mr-4">
@@ -26,6 +27,9 @@
 
 <script setup>
 import { computed } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const props = defineProps({
   binome: { type: Object, required: true },
@@ -41,12 +45,12 @@ const cardColor = computed(() => {
 
 // 🎯 Icône selon le type d’appel
 const icon = computed(() => {
-  if (props.nextCallType === "Client") return "mdi-account"; // Client élégant
-  if (props.nextCallType === "Employé") return "mdi-account-tie"; // Employé de maison
+  if (props.nextCallType === "Client") return "mdi-account";
+  if (props.nextCallType === "Employé") return "mdi-account-tie";
   return "mdi-help-circle";
 });
 
-// 🧠 Nom affiché (Prénom Nom)
+// 🧠 Nom affiché
 const displayedName = computed(() => {
   if (props.nextCallType === "Client" && props.binome?.client) {
     return `${props.binome.client.first_name} ${props.binome.client.last_name}`;
@@ -63,4 +67,21 @@ const subtitle = computed(() => {
   if (props.nextCallType === "Employé") return "Appel intervenant à effectuer";
   return "";
 });
+
+// 🚀 Navigation
+function goToBinome() {
+  if (props.binome?.id) router.push(`/binome/${props.binome.id}`);
+}
 </script>
+
+<style scoped>
+.hover-card {
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 🩶 Légère variation de couleur au survol */
+.hover-card:hover {
+  filter: brightness(1.1);
+}
+</style>

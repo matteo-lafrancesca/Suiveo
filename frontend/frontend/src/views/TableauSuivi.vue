@@ -51,7 +51,7 @@ onMounted(async () => {
 
 <style scoped>
 .content-root {
-  overflow: hidden;
-  height: 100vh;
+  min-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 </style>

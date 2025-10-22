@@ -1,8 +1,7 @@
 <template>
   <v-sheet
-    class="d-flex align-center justify-center"
+    class="d-flex align-center justify-center login-container"
     color="background"
-    height="100vh"
   >
     <v-card
       elevation="8"
@@ -59,17 +58,11 @@ import axios from "axios";
 
 const router = useRouter();
 
-// --------------------
-// Variables réactives
-// --------------------
 const email = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
 
-// --------------------
-// Fonction de login
-// --------------------
 const handleLogin = async () => {
   error.value = "";
   loading.value = true;
@@ -81,17 +74,11 @@ const handleLogin = async () => {
     });
 
     const { access, refresh, user } = response.data;
-
-    // 🔐 On stocke les tokens et infos utilisateur dans le localStorage
     localStorage.setItem("access", access);
     localStorage.setItem("refresh", refresh);
     localStorage.setItem("user", JSON.stringify(user));
 
-    console.log("✅ Connexion réussie :", user);
-
-    // 🚀 Redirection vers / (le router gérera la redirection vers /dashboard)
     router.push("/");
-
   } catch (err) {
     console.error(err);
     error.value =
@@ -101,3 +88,13 @@ const handleLogin = async () => {
   }
 };
 </script>
+
+<style scoped>
+.login-container {
+  min-height: calc(100vh - 80px); /* tient compte du header si affiché */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+</style>

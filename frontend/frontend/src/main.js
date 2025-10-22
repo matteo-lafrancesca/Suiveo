@@ -13,8 +13,11 @@ import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import '@mdi/font/css/materialdesignicons.css'
 
-// --- Import CSS global (avec police DM Sans) ---
-import './assets/main.css'
+// --- Import de la police Google DM Sans ---
+import '@fontsource/dm-sans/400.css'
+import '@fontsource/dm-sans/500.css'
+import '@fontsource/dm-sans/600.css'
+import '@fontsource/dm-sans/700.css'
 
 // --- Création de l'instance Vuetify ---
 const vuetify = createVuetify({
@@ -44,6 +47,15 @@ const vuetify = createVuetify({
     defaultSet: 'mdi',
     aliases,
     sets: { mdi },
+  },
+
+  // ✅ Appliquer DM Sans à tous les composants Vuetify
+  defaults: {
+    global: {
+      style: {
+        fontFamily: "'DM Sans', sans-serif",
+      },
+    },
   },
 })
 
