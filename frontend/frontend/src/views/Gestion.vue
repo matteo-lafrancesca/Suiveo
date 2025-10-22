@@ -112,52 +112,51 @@
     </v-row>
 
     <!-- === Création de Binôme === -->
-<!-- === Création de Binôme === -->
-<v-card class="card-block mt-8">
-  <h2 class="section-title mb-4">
-    <v-icon color="primary" class="mr-2">mdi-link-variant</v-icon> Créer un binôme
-  </h2>
+    <v-card class="card-block mt-8">
+      <h2 class="section-title mb-4">
+        <v-icon color="primary" class="mr-2">mdi-link-variant</v-icon> Créer un binôme
+      </h2>
 
-  <div class="d-flex flex-wrap align-center justify-start gap-4">
-    <v-autocomplete
-      v-model="selectedClient"
-      :items="clients"
-      item-title="full_name"
-      item-value="id"
-      label="Sélectionner un client"
-      variant="outlined"
-      density="comfortable"
-      clearable
-      hide-details
-      class="mr-4"
-      style="min-width: 300px"
-    />
+      <div class="d-flex flex-wrap align-center justify-start gap-4">
+        <!-- ✅ On charge les clients disponibles (sans binôme existant) -->
+        <v-autocomplete
+          v-model="selectedClient"
+          :items="availableClients"
+          item-title="full_name"
+          item-value="id"
+          label="Sélectionner un client"
+          variant="outlined"
+          density="comfortable"
+          clearable
+          hide-details
+          class="mr-4"
+          style="min-width: 300px"
+        />
 
-    <v-autocomplete
-      v-model="selectedEmployee"
-      :items="employees"
-      item-title="full_name"
-      item-value="id"
-      label="Sélectionner un salarié"
-      variant="outlined"
-      density="comfortable"
-      clearable
-      hide-details
-      class="mr-4"
-      style="min-width: 300px"
-    />
+        <v-autocomplete
+          v-model="selectedEmployee"
+          :items="employees"
+          item-title="full_name"
+          item-value="id"
+          label="Sélectionner un salarié"
+          variant="outlined"
+          density="comfortable"
+          clearable
+          hide-details
+          class="mr-4"
+          style="min-width: 300px"
+        />
 
-    <v-btn
-      color="primary"
-      prepend-icon="mdi-account-multiple-plus"
-      :disabled="!selectedClient || !selectedEmployee"
-      @click="createBinome"
-    >
-      Associer le binôme
-    </v-btn>
-  </div>
-</v-card>
-
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-account-multiple-plus"
+          :disabled="!selectedClient || !selectedEmployee"
+          @click="goToCreateBinome"
+        >
+          Associer le binôme
+        </v-btn>
+      </div>
+    </v-card>
 
     <!-- === Dialogue création client/employé === -->
     <v-dialog v-model="dialogVisible" max-width="400px">
@@ -208,9 +207,13 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import api from "@/services/api";
 
+const router = useRouter();
+
 const clients = ref([]);
+const availableClients = ref([]); // 👈 clients sans binôme
 const employees = ref([]);
 const loading = ref(false);
 
@@ -295,15 +298,16 @@ async function createEntry() {
   await fetchData();
 }
 
-async function createBinome() {
+// === Redirection vers le formulaire de création de binôme ===
+function goToCreateBinome() {
   if (!selectedClient.value || !selectedEmployee.value) return;
-  await api.post("/binomes/", {
-    client_id: selectedClient.value,
-    employee_id: selectedEmployee.value,
+  router.push({
+    path: "/creation-binome",
+    query: {
+      client_id: selectedClient.value,
+      employee_id: selectedEmployee.value,
+    },
   });
-  selectedClient.value = null;
-  selectedEmployee.value = null;
-  await fetchData();
 }
 
 // === Chargement API ===
@@ -311,14 +315,23 @@ onMounted(fetchData);
 async function fetchData() {
   loading.value = true;
   try {
-    const [clientsRes, employeesRes] = await Promise.all([
+    // 👇 Charge les clients complets + ceux disponibles
+    const [clientsRes, availableRes, employeesRes] = await Promise.all([
       api.get("/clients/"),
+      api.get("/clients/disponibles/"),
       api.get("/employees/"),
     ]);
+
     clients.value = clientsRes.data.map((c) => ({
       ...c,
       full_name: `${c.first_name} ${c.last_name}`,
     }));
+
+    availableClients.value = availableRes.data.map((c) => ({
+      ...c,
+      full_name: `${c.first_name} ${c.last_name}`,
+    }));
+
     employees.value = employeesRes.data.map((e) => ({
       ...e,
       full_name: `${e.first_name} ${e.last_name}`,
@@ -330,7 +343,6 @@ async function fetchData() {
 </script>
 
 <style scoped>
-
 /* === Cartes principales === */
 .card-block {
   background-color: #ffffff;

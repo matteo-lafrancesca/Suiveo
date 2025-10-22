@@ -6,6 +6,7 @@ import Binome from "@/views/Binome.vue"; // 👈 nouvelle vue importée
 import Planning from "@/views/Planning.vue";
 import ListeBinome from "@/views/ListeBinome.vue";
 import Gestion from "@/views/Gestion.vue";
+import CreateBinome from "@/views/CreateBinome.vue";
 
 // 🔍 Vérifie si l'utilisateur est connecté
 function isAuthenticated() {
@@ -88,6 +89,17 @@ const routes = [
       else next();
     },
   },
+  {
+    path: "/creation-binome",
+    name: "Création Binome",
+    component: CreateBinome,
+    props: true, // permet de passer automatiquement l'id à la vue
+    beforeEnter: (to, from, next) => {
+      if (!isAuthenticated()) next("/login");
+      else next();
+    },
+  },
+  
 ];
 
 const router = createRouter({
