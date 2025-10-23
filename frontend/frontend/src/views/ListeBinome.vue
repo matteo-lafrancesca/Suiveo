@@ -48,10 +48,10 @@
             {{ item.employee.first_name }} {{ item.employee.last_name }}
           </template>
 
-          <!-- Statut d'avancement -->
+          <!-- Dernier appel -->
           <template #item.last_call="{ item }">
             <span v-if="item.last_call">
-              {{ item.last_call.template?.name || "—" }}
+              {{ item.last_call.template_name }}
             </span>
             <span v-else>—</span>
           </template>
@@ -68,10 +68,18 @@
             </v-chip>
           </template>
 
+          <!-- Prochain appel -->
+          <template #item.next_call="{ item }">
+            <span v-if="item.next_call">
+              {{ item.next_call.template_name }}
+            </span>
+            <span v-else>—</span>
+          </template>
+
           <!-- Semaine du prochain appel -->
           <template #item.next_call_week="{ item }">
             <span v-if="item.next_call">
-              Semaine {{ getWeekNumber(item.next_call.scheduled_date) }}
+              Semaine {{ item.next_call.week_number }}
             </span>
             <span v-else>—</span>
           </template>
@@ -130,8 +138,6 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
-import { getWeek } from "date-fns";
-import { fr } from "date-fns/locale";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -159,8 +165,9 @@ async function deleteConfirmed() {
 const headers = [
   { title: "Client", key: "client", sortable: true },
   { title: "Salarié", key: "employee", sortable: true },
-  { title: "Statut d'avancement", key: "last_call", sortable: false },
+  { title: "Dernier appel", key: "last_call", sortable: false },
   { title: "Statut de conformité", key: "state", sortable: true },
+  { title: "Prochain appel", key: "next_call", sortable: false },
   { title: "Semaine du prochain appel", key: "next_call_week", sortable: true },
   { title: "", key: "actions", sortable: false },
 ];
@@ -170,35 +177,11 @@ onMounted(fetchBinomes);
 async function fetchBinomes() {
   loading.value = true;
   try {
-    const { data } = await api.get("/binomes/");
-    binomes.value = await enrichBinomes(data);
+    const { data } = await api.get("/binomes/enrichis/");
+    binomes.value = data;
   } finally {
     loading.value = false;
   }
-}
-
-// === Enrichissement des données binômes ===
-async function enrichBinomes(data) {
-  const results = [];
-  for (const b of data) {
-    const [callsRes] = await Promise.all([api.get(`/calls/?binome=${b.id}`)]);
-    const calls = callsRes.data;
-
-    const lastCall = calls
-      .filter((c) => c.actual_date)
-      .sort((a, b) => new Date(b.actual_date) - new Date(a.actual_date))[0];
-
-    const nextCall = calls
-      .filter((c) => !c.actual_date)
-      .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))[0];
-
-    results.push({
-      ...b,
-      last_call: lastCall || null,
-      next_call: nextCall || null,
-    });
-  }
-  return results;
 }
 
 // === Filtrage recherche ===
@@ -210,17 +193,17 @@ const filteredBinomes = computed(() => {
     const client = `${b.client.first_name} ${b.client.last_name}`.toLowerCase();
     const employee = `${b.employee.first_name} ${b.employee.last_name}`.toLowerCase();
     const state = b.state?.toLowerCase() || "";
-    const lastCall = b.last_call?.template?.name?.toLowerCase() || "";
-    const nextWeek = b.next_call
-      ? `semaine ${getWeekNumber(b.next_call.scheduled_date)}`.toLowerCase()
-      : "";
+    const lastCall = b.last_call?.template_name?.toLowerCase() || "";
+    const nextCall = b.next_call?.template_name?.toLowerCase() || "";
+    const week = b.next_call?.week_number?.toString() || "";
 
     return (
       client.includes(query) ||
       employee.includes(query) ||
       state.includes(query) ||
       lastCall.includes(query) ||
-      nextWeek.includes(query)
+      nextCall.includes(query) ||
+      week.includes(query)
     );
   });
 });
@@ -241,11 +224,6 @@ function getStateColor(state) {
   }
 }
 
-// === Semaine d'une date ===
-function getWeekNumber(dateStr) {
-  return getWeek(new Date(dateStr), { locale: fr });
-}
-
 // === Navigation ===
 function goToBinome(id) {
   router.push(`/binome/${id}`);
@@ -253,7 +231,6 @@ function goToBinome(id) {
 </script>
 
 <style scoped>
-/* === Cartes principales === */
 .card-block {
   background-color: #ffffff;
   border-radius: 16px;
@@ -261,47 +238,34 @@ function goToBinome(id) {
   border-top: 3px solid var(--v-primary-base);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
-
-/* === Titre de section === */
 .section-title {
   display: flex;
   align-items: center;
   font-weight: 600;
   color: #2a4252;
 }
-
-/* === Barre de recherche === */
 .search-bar {
   background-color: #fff;
   border-radius: 8px;
   width: 300px;
 }
-
-/* === Tableau === */
 .table-wrapper {
   max-height: 65vh;
   overflow-y: auto;
 }
-
 .styled-table {
   border-radius: 8px;
   background-color: #fff;
 }
-
 .styled-table tbody tr:hover {
   background-color: rgba(42, 66, 82, 0.05);
 }
-
-/* === Boutons d’action === */
 .v-btn {
   transition: background 0.2s ease;
 }
-
 .v-btn:hover {
   background-color: rgba(42, 66, 82, 0.1);
 }
-
-/* === Alerte "aucune donnée" === */
 .v-alert {
   border-radius: 12px;
 }

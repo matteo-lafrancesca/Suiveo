@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Client, Employee, Binome, BinomePause,
-    CallTemplate, FieldVisitTemplate, Call, FieldVisit
+    CallTemplate, Call
 )
 
 @admin.register(Client)
@@ -26,6 +26,4 @@ class BinomePauseAdmin(admin.ModelAdmin):
     list_filter = ("start_date",)
 
 admin.site.register(CallTemplate)
-admin.site.register(FieldVisitTemplate)
 admin.site.register(Call)
-admin.site.register(FieldVisit)

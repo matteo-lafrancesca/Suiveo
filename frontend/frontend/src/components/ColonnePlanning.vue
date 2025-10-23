@@ -32,13 +32,10 @@
           >
             <BinomeCard
               :binome="b"
-              :nextCallType="b.next_call?.template?.type"
+              :nextCallType="b.next_call?.template_type"
             />
           </v-responsive>
         </template>
-        <div v-else class="text-secondary text-body-2 mt-4">
-          Aucun appel prévu
-        </div>
       </v-sheet>
     </v-sheet>
   </v-col>

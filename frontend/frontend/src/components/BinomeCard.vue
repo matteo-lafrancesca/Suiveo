@@ -33,42 +33,73 @@ const router = useRouter();
 
 const props = defineProps({
   binome: { type: Object, required: true },
-  nextCallType: { type: String, required: false }, // "Client" ou "Employé"
+  nextCallType: { type: String, required: false }, // "Client", "Employé", "RDV", "Visite"
 });
 
 // 🎨 Couleur principale selon le type d’appel
 const cardColor = computed(() => {
-  if (props.nextCallType === "Client") return "primary";
-  if (props.nextCallType === "Employé") return "secondary";
-  return "grey";
+  switch (props.nextCallType) {
+    case "Client":
+      return "primary"; // bleu
+    case "Employé":
+      return "secondary"; // violet
+    case "RDV":
+      return "#f59e0b"; // orange
+    case "Visite":
+      return "#10b981"; // vert
+    default:
+      return "#9ca3af"; // gris neutre
+  }
 });
 
 // 🎯 Icône selon le type d’appel
 const icon = computed(() => {
-  if (props.nextCallType === "Client") return "mdi-account";
-  if (props.nextCallType === "Employé") return "mdi-account-tie";
-  return "mdi-help-circle";
+  switch (props.nextCallType) {
+    case "Client":
+      return "mdi-account";
+    case "Employé":
+      return "mdi-account-tie";
+    case "RDV":
+      return "mdi-phone"; // prise de rendez-vous
+    case "Visite":
+      return "mdi-home"; // visite sur site
+    default:
+      return "mdi-help-circle";
+  }
 });
 
-// 🧠 Nom affiché
+// 🧠 Nom affiché selon le type
 const displayedName = computed(() => {
-  if (props.nextCallType === "Client" && props.binome?.client) {
-    return `${props.binome.client.first_name} ${props.binome.client.last_name}`;
+  const c = props.binome?.client;
+  const e = props.binome?.employee;
+  switch (props.nextCallType) {
+    case "Client":
+      return c ? `${c.first_name} ${c.last_name}` : "Client inconnu";
+    case "Employé":
+      return e ? `${e.first_name} ${e.last_name}` : "Employé inconnu";
+    default:
+      // Si RDV ou Visite : afficher les deux
+      return c && e ? `${c.first_name} ${c.last_name} – ${e.first_name}` : "Binôme inconnu";
   }
-  if (props.nextCallType === "Employé" && props.binome?.employee) {
-    return `${props.binome.employee.first_name} ${props.binome.employee.last_name}`;
-  }
-  return "Inconnu";
 });
 
 // 🗒️ Sous-titre explicite
 const subtitle = computed(() => {
-  if (props.nextCallType === "Client") return "Appel client à effectuer";
-  if (props.nextCallType === "Employé") return "Appel intervenant à effectuer";
-  return "";
+  switch (props.nextCallType) {
+    case "Client":
+      return "Appel client à effectuer";
+    case "Employé":
+      return "Appel intervenant à effectuer";
+    case "RDV":
+      return "Prise de rendez-vous à planifier";
+    case "Visite":
+      return "Visite sur site à effectuer";
+    default:
+      return "";
+  }
 });
 
-// 🚀 Navigation
+// 🚀 Navigation vers la fiche du binôme
 function goToBinome() {
   if (props.binome?.id) router.push(`/binome/${props.binome.id}`);
 }
@@ -77,11 +108,10 @@ function goToBinome() {
 <style scoped>
 .hover-card {
   cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
-
-/* 🩶 Légère variation de couleur au survol */
 .hover-card:hover {
-  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 </style>

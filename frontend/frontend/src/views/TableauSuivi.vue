@@ -21,28 +21,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import api from "@/services/api";
 import ColonneTableauSuivi from "@/components/ColonneTableauSuivi.vue";
 
-const binomes = ref([]);
+const enRetard = ref([]);
+const aAppeler = ref([]);
+const nonConformes = ref([]);
 const loading = ref(false);
-
-const enRetard = computed(() =>
-  binomes.value.filter((b) => b.state === "En retard")
-);
-const aAppeler = computed(() =>
-  binomes.value.filter((b) => b.state === "À appeler")
-);
-const nonConformes = computed(() =>
-  binomes.value.filter((b) => b.state === "Non conforme")
-);
 
 onMounted(async () => {
   loading.value = true;
   try {
-    const { data } = await api.get("/binomes/");
-    binomes.value = data;
+    const { data } = await api.get("/binomes/tableau-suivi/");
+    enRetard.value = data.en_retard;
+    aAppeler.value = data.a_appeler;
+    nonConformes.value = data.non_conformes;
   } finally {
     loading.value = false;
   }

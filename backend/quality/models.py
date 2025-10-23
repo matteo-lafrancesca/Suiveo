@@ -89,9 +89,11 @@ class CallTemplate(models.Model):
     class CallType(models.TextChoices):
         CLIENT = "Client", "Client"
         EMPLOYEE = "Employé", "Employé"
+        VISITE = "Visite", "Visite"
+        RDV = "RDV" , "RDV"
 
     name = models.CharField(max_length=100, unique=True)
-    offset_weeks = models.IntegerField(default=0)
+    offset_weeks = models.IntegerField(null=True, blank=True)
     recurrence_months = models.IntegerField(null=True, blank=True)
     type = models.CharField(
         max_length=20,
@@ -102,23 +104,6 @@ class CallTemplate(models.Model):
     class Meta:
         verbose_name = "Template d'appel"
         verbose_name_plural = "Templates d'appel"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-
-class FieldVisitTemplate(models.Model):
-    """
-    Modèle de programmation de visites terrain.
-    """
-    name = models.CharField(max_length=100, unique=True)
-    offset_weeks = models.IntegerField(default=0)
-    recurrence_months = models.IntegerField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Template de visite terrain"
-        verbose_name_plural = "Templates de visite terrain"
         ordering = ["name"]
 
     def __str__(self):
@@ -143,28 +128,6 @@ class Call(models.Model):
     class Meta:
         verbose_name = "Appel"
         verbose_name_plural = "Appels"
-        ordering = ["-scheduled_date"]
-
-    def __str__(self):
-        return f"{self.title} — {self.binome}"
-
-
-class FieldVisit(models.Model):
-    """
-    Visites terrain / contrôles qualité.
-    """
-    binome = models.ForeignKey(Binome, on_delete=models.CASCADE, related_name="field_visits")
-    template = models.ForeignKey(FieldVisitTemplate, on_delete=models.SET_NULL, null=True, blank=True, related_name="field_visits")
-
-    title = models.CharField(max_length=120)
-    note = models.TextField(blank=True)
-
-    scheduled_date = models.DateField()
-    actual_date    = models.DateField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Visite terrain"
-        verbose_name_plural = "Visites terrain"
         ordering = ["-scheduled_date"]
 
     def __str__(self):

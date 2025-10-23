@@ -2,7 +2,7 @@ from datetime import date
 from rest_framework import serializers
 from .models import (
     Client, Employee, Binome, BinomePause,
-    Call, CallTemplate, FieldVisit, FieldVisitTemplate
+    Call, CallTemplate
 )
 
 
@@ -25,13 +25,6 @@ class CallTemplateSerializer(serializers.ModelSerializer):
         model = CallTemplate
         fields = ["id", "name", "type"]
 
-
-class FieldVisitTemplateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FieldVisitTemplate
-        fields = "__all__"
-
-
 # --- Événements ---
 class CallSerializer(serializers.ModelSerializer):
     # 🔹 Inclure le template complet (type, id, name)
@@ -44,13 +37,6 @@ class CallSerializer(serializers.ModelSerializer):
             "scheduled_date", "actual_date",
             "template",
         ]
-
-
-class FieldVisitSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FieldVisit
-        fields = "__all__"
-
 
 # --- Noyau métier ---
 class BinomeSerializer(serializers.ModelSerializer):
