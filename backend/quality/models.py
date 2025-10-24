@@ -121,6 +121,7 @@ class Call(models.Model):
 
     title = models.CharField(max_length=120)
     note = models.TextField(blank=True)
+    report = models.TextField(null = True, blank=True)
 
     scheduled_date = models.DateField()
     actual_date    = models.DateField(null=True, blank=True)

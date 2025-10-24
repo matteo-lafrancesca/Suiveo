@@ -33,7 +33,7 @@ class CallSerializer(serializers.ModelSerializer):
     class Meta:
         model = Call
         fields = [
-            "id", "title", "note",
+            "id", "title", "note","report",
             "scheduled_date", "actual_date",
             "template",
         ]

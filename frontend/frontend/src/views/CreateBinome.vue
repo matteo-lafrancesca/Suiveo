@@ -5,8 +5,19 @@
         Créer un binôme
       </h2>
 
+      <!-- 🔴 Message d'erreur -->
+      <v-alert
+        v-if="errorMessage"
+        type="error"
+        variant="tonal"
+        class="mb-4"
+        border="start"
+      >
+        {{ errorMessage }}
+      </v-alert>
+
       <v-form @submit.prevent="submitForm">
-        <!-- Date de première intervention -->
+        <!-- Date -->
         <v-text-field
           v-model="firstIntervention"
           label="Date de première intervention"
@@ -53,15 +64,16 @@ import api from "@/services/api";
 const router = useRouter();
 const route = useRoute();
 
-// ✅ Les IDs sont passés en query depuis la page Gestion
 const clientId = route.query.client_id;
 const employeeId = route.query.employee_id;
 
 const firstIntervention = ref("");
 const note = ref("");
 const loading = ref(false);
+const errorMessage = ref("");
 
 async function submitForm() {
+  errorMessage.value = "";
   if (!clientId || !employeeId || !firstIntervention.value) return;
 
   loading.value = true;
@@ -71,13 +83,18 @@ async function submitForm() {
       employee_id: employeeId,
       first_intervention_date: firstIntervention.value,
       note: note.value,
-      state: "Conforme", 
+      state: "Conforme",
     });
 
-    // 🔁 Redirection après création
     router.push("/liste-binomes");
   } catch (err) {
     console.error("Erreur lors de la création du binôme :", err);
+    // 🔹 Si l’API renvoie un message d’erreur clair
+    if (err.response?.data?.error) {
+      errorMessage.value = err.response.data.error;
+    } else {
+      errorMessage.value = "Une erreur est survenue lors de la création du binôme.";
+    }
   } finally {
     loading.value = false;
   }
