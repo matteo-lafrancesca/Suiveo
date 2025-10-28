@@ -3,12 +3,7 @@
     <v-row no-gutters class="fill-height d-flex">
       <!-- === Colonne gauche : Fiche Binôme === -->
       <v-col cols="12" md="4" class="pa-3">
-        <v-card
-          v-if="binome"
-          class="pa-6 rounded-xl elevation-3"
-          color="surface"
-        >
-          <!-- Header client -->
+        <v-card v-if="binome" class="pa-6 rounded-xl elevation-3" color="surface">
           <v-row align="center" justify="space-between" class="mb-4">
             <v-col cols="auto" class="d-flex align-center">
               <v-avatar size="72" class="mr-4">
@@ -22,7 +17,7 @@
               </div>
             </v-col>
 
-            <v-col cols="auto" class="d-flex justify-end align-center">
+            <v-col cols="auto">
               <v-chip
                 :color="getStateColor(binome.state)"
                 class="px-4 py-2 text-body-1 font-weight-medium chip-opaque"
@@ -36,59 +31,67 @@
             </v-col>
           </v-row>
 
-          <v-divider class="my-5"></v-divider>
+          <v-divider class="my-5" />
 
-          <!-- Infos -->
           <div class="mb-4">
-            <div class="text-subtitle-1 text-secondary mb-1">
-              Intervenant :
-            </div>
+            <div class="text-subtitle-1 text-secondary mb-1">Intervenant :</div>
             <div class="text-body-1 font-weight-medium">
               {{ binome.employee.first_name }} {{ binome.employee.last_name }}
             </div>
           </div>
 
           <div class="mb-4">
-            <div class="text-subtitle-1 text-secondary mb-1">
-              Date Première Intervention
-            </div>
+            <div class="text-subtitle-1 text-secondary mb-1">Date Première Intervention</div>
             <div class="text-body-1 font-weight-medium">
               {{ formatDate(binome.first_intervention_date) }}
             </div>
           </div>
 
           <div>
-            <div class="text-subtitle-1 text-secondary mb-1">
-              Autres informations utiles
-            </div>
-            <div class="text-body-1">
-              {{ binome.note || "—" }}
-            </div>
+            <div class="text-subtitle-1 text-secondary mb-1">Autres informations utiles</div>
+            <div class="text-body-1">{{ binome.note || "—" }}</div>
           </div>
         </v-card>
 
-        <v-card
-          v-else
-          class="pa-6 d-flex justify-center align-center elevation-2"
-        >
+        <v-card v-else class="pa-6 d-flex justify-center align-center elevation-2">
           <v-progress-circular indeterminate color="primary" />
         </v-card>
       </v-col>
 
-      <!-- === Colonne droite : Timeline + nextCall intégré === -->
+      <!-- === Colonne droite : Timeline === -->
       <v-col cols="12" md="8" class="pa-3 d-flex flex-column">
-        <div
-          v-if="completedCalls.length || nextCall"
-          class="timeline-scroll"
-        >
+        <div v-if="completedCalls.length || nextCall" class="timeline-scroll">
+          <!-- Dernier appel -->
           <BinomeTimeline
-            :events="completedCalls"
+            :events="[completedCalls[completedCalls.length - 1]]"
             :nextCall="nextCall"
             :binomeState="binome.state"
-            @conforme="markConforme"
-            @nonConforme="markNonConforme"
-            @reprogram="openReprogramModal"
           />
+
+          <!-- Bouton pour afficher l’historique -->
+          <div v-if="completedCalls.length > 1" class="text-center my-4">
+            <v-btn
+              variant="text"
+              color="primary"
+              @click="showHistory = !showHistory"
+            >
+              {{ showHistory ? "Masquer l’historique" : "Afficher l’historique" }}
+              <v-icon end>
+                {{ showHistory ? "mdi-chevron-up" : "mdi-chevron-down" }}
+              </v-icon>
+            </v-btn>
+          </div>
+
+          <!-- Historique (anciens appels) -->
+          <transition name="fade">
+            <div v-if="showHistory">
+              <BinomeTimeline
+                :events="completedCalls.slice(0, -1)"
+                :nextCall="null"
+                :binomeState="binome.state"
+              />
+            </div>
+          </transition>
         </div>
 
         <!-- Modale reprogrammation -->
@@ -126,8 +129,8 @@ const completedCalls = ref([]);
 const nextCall = ref(null);
 const reprogramDialog = ref(false);
 const newDate = ref("");
+const showHistory = ref(false);
 
-// --- Fetch details
 async function fetchBinomeDetails() {
   try {
     const id = route.params.id;
@@ -212,25 +215,10 @@ function getStateIcon(state) {
 .v-card {
   border-radius: 16px;
 }
-
 .text-secondary {
   color: #6b7280;
 }
 
-/* Meilleure visibilité des textes */
-.text-h5 {
-  font-size: 1.4rem !important;
-}
-.text-body-1 {
-  font-size: 1.1rem !important;
-  line-height: 1.6;
-}
-.text-subtitle-1 {
-  font-size: 1.05rem !important;
-  font-weight: 500;
-}
-
-/* Scroll de la timeline */
 .timeline-scroll {
   max-height: calc(100vh - 150px);
   overflow-y: auto;
@@ -247,5 +235,15 @@ function getStateIcon(state) {
 }
 .timeline-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(42, 66, 82, 0.5);
+}
+
+/* Animation simple pour l’historique */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

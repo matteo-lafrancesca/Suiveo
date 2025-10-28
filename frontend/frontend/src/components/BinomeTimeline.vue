@@ -1,18 +1,12 @@
 <template>
-  <div ref="scrollContainer" class="tl-scroll px-4">
-    <v-timeline
-      class="tl"
-      align="start"
-      side="end"
-      density="compact"
-    >
-      <!-- === Appels terminés === -->
+  <div class="px-4">
+    <v-timeline align="start" side="end" density="compact">
       <v-timeline-item
-        v-for="(call, i) in events"
+        v-for="call in events"
         :key="call.id"
         dot-color="primary"
         size="small"
-        class="call-item"
+        class="mb-10"
       >
         <template #opposite>
           <div class="text-caption text-medium-emphasis">
@@ -22,7 +16,7 @@
 
         <div>
           <div class="d-flex align-center mb-2">
-            <v-icon class="mr-2 tl-icon">mdi-phone</v-icon>
+            <v-icon class="mr-2">mdi-phone</v-icon>
             <span class="text-h6 font-weight-bold text-primary">
               {{ call.title }}
             </span>
@@ -34,27 +28,20 @@
             {{ call.note?.trim() || "Aucun compte rendu disponible." }}
           </div>
 
-          <!-- ✅ Affiche le report du dernier appel
-               si binôme conforme OU non conforme -->
           <div
-            v-if="
-              i === events.length - 1 &&
-              call.report &&
-              ['Conforme', 'Non conforme'].includes(binomeState)
-            "
-            class="last-report mt-4"
+            v-if="call.report && ['Conforme', 'Non conforme'].includes(binomeState)"
+            class="mt-4 text-body-1 font-weight-bold text-primary"
           >
-            <strong>{{ call.report }}</strong>
+            {{ call.report }}
           </div>
         </div>
       </v-timeline-item>
 
-      <!-- === Prochain appel (nextCall) === -->
       <v-timeline-item
         v-if="nextCall && ['À appeler', 'En retard'].includes(binomeState)"
         dot-color="warning"
         size="small"
-        class="call-item"
+        class="mb-10"
       >
         <template #opposite>
           <div class="text-caption text-medium-emphasis">
@@ -64,7 +51,7 @@
 
         <div>
           <div class="d-flex align-center mb-2">
-            <v-icon class="mr-2 tl-icon">mdi-phone</v-icon>
+            <v-icon class="mr-2 text-warning">mdi-phone</v-icon>
             <span class="text-h6 font-weight-bold text-warning">
               {{ nextCall.title }}
             </span>
@@ -86,25 +73,18 @@
             </v-btn>
 
             <div>
-              <v-btn color="error" class="mr-2" @click="$emit('nonConforme')">
-                Non Conforme
-              </v-btn>
-              <v-btn color="success" @click="$emit('conforme', report)">
-                Conforme
-              </v-btn>
+              <v-btn color="error" class="mr-2" @click="$emit('nonConforme')">Non Conforme</v-btn>
+              <v-btn color="success" @click="$emit('conforme', report)">Conforme</v-btn>
             </div>
           </div>
         </div>
       </v-timeline-item>
     </v-timeline>
-
-    <!-- Spacer hors timeline -->
-    <div aria-hidden="true" class="tl-spacer"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref } from "vue";
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -113,7 +93,6 @@ const props = defineProps({
 });
 
 const report = ref("");
-const scrollContainer = ref(null);
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -124,67 +103,4 @@ function formatDate(dateStr) {
     year: "numeric",
   });
 }
-
-async function scrollToBottom() {
-  await nextTick();
-  const el = scrollContainer.value;
-  if (el) el.scrollTop = el.scrollHeight;
-}
-
-onMounted(scrollToBottom);
-watch(() => [props.events, props.nextCall], scrollToBottom, { deep: true });
 </script>
-
-<style scoped>
-/* Container scrollable */
-.tl-scroll {
-  --tl-offset: 150px;
-  max-height: calc(100dvh - var(--tl-offset));
-  overflow-y: auto;
-  padding-right: clamp(6px, 1vw, 16px);
-  scroll-behavior: smooth;
-}
-
-/* Items espacés et confortables */
-.call-item {
-  margin-bottom: clamp(40px, 5vh, 80px);
-}
-
-.text-h6 {
-  font-size: 1.3rem !important;
-}
-
-.text-body-1 {
-  font-size: 1.1rem !important;
-  line-height: 1.6;
-}
-
-.last-report {
-  font-size: 1.1rem;
-  line-height: 1.5;
-  font-weight: 600;
-  color: var(--v-theme-primary);
-}
-
-.tl-icon {
-  font-size: clamp(22px, 2.4vh, 30px);
-  color: currentColor;
-}
-
-/* Spacer en bas pour respirer */
-.tl-spacer {
-  height: clamp(40vh, 70vh, 110vh);
-}
-
-/* Scrollbar */
-.tl-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-.tl-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(42, 66, 82, 0.3);
-  border-radius: 6px;
-}
-.tl-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(42, 66, 82, 0.5);
-}
-</style>
