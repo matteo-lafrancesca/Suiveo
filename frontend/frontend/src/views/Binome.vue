@@ -1,135 +1,219 @@
 <template>
-  <v-container fluid class="pa-8 fill-height content-root">
-    <v-row no-gutters class="fill-height d-flex">
-      <!-- === Colonne gauche : Fiche Binôme === -->
-      <v-col cols="12" md="4" class="pa-3">
-        <v-card v-if="binome" class="pa-6 rounded-xl elevation-3" color="surface">
-          <v-row align="center" justify="space-between" class="mb-4">
-            <v-col cols="auto" class="d-flex align-center">
-              <v-avatar size="72" class="mr-4">
-                <v-icon size="40" color="primary">mdi-account</v-icon>
+  <v-container fluid class="pa-8 fill-height bg-grey-lighten-5 overflow-hidden">
+    <v-row class="fill-height d-flex justify-center">
+      
+      <v-col cols="12" md="4" lg="3" class="pa-3">
+        <v-card v-if="binome" class="rounded-xl border-thin" elevation="0" color="white">
+          
+          <div class="pa-6 bg-grey-lighten-5 d-flex flex-column align-center text-center rounded-t-xl position-relative">
+            <v-avatar size="88" class="elevation-2 mb-3 bg-white">
+              <v-icon size="48" color="primary">mdi-account</v-icon>
+            </v-avatar>
+            
+            <h2 class="text-h5 font-weight-bold text-high-emphasis">
+              {{ binome.client.first_name }} {{ binome.client.last_name }}
+            </h2>
+            <div class="text-caption text-uppercase font-weight-bold text-medium-emphasis mt-1">
+              Dossier Client
+            </div>
+
+            <v-chip
+              :color="getStateColor(binome.state)"
+              class="mt-3 font-weight-bold"
+              size="small"
+              variant="flat"
+            >
+              <v-icon start size="16">{{ getStateIcon(binome.state) }}</v-icon>
+              {{ binome.state }}
+            </v-chip>
+          </div>
+
+          <v-divider></v-divider>
+
+          <div class="pa-6">
+            
+            <div class="d-flex align-start mb-6">
+              <v-avatar color="primary" variant="tonal" size="40" class="mr-3 rounded-lg">
+                <v-icon>mdi-briefcase-account</v-icon>
               </v-avatar>
               <div>
-                <div class="text-h5 font-weight-bold">
-                  {{ binome.client.first_name }} {{ binome.client.last_name }}
+                <div class="text-caption text-medium-emphasis text-uppercase font-weight-bold">Intervenant</div>
+                <div class="text-body-1 font-weight-medium">
+                  {{ binome.employee.first_name }} {{ binome.employee.last_name }}
                 </div>
-                <div class="text-body-1 text-secondary">Client</div>
               </div>
-            </v-col>
+            </div>
 
-            <v-col cols="auto">
-              <v-chip
-                :color="getStateColor(binome.state)"
-                class="px-4 py-2 text-body-1 font-weight-medium chip-opaque"
-                label
+            <div class="d-flex align-start mb-6">
+              <v-avatar color="secondary" variant="tonal" size="40" class="mr-3 rounded-lg">
+                <v-icon>mdi-calendar-start</v-icon>
+              </v-avatar>
+              <div>
+                <div class="text-caption text-medium-emphasis text-uppercase font-weight-bold">Début Intervention</div>
+                <div class="text-body-1 font-weight-medium">
+                  {{ formatDate(binome.first_intervention_date) }}
+                </div>
+              </div>
+            </div>
+
+            <BinomeNote 
+              :binome-id="binome.id"
+              :note="binome.note"
+              @update:note="binome.note = $event"
+            />
+
+            <div>
+              <div class="text-caption text-medium-emphasis text-uppercase font-weight-bold mb-3">
+                Actions rapides
+              </div>
+
+              <v-btn
+                block
+                color="primary"
+                variant="tonal"
+                class="mb-2 justify-start"
+                rounded="lg"
+                prepend-icon="mdi-phone-plus"
+                @click="showManualCallDialog = true"
               >
-                <v-icon left size="22" class="mr-1">
-                  {{ getStateIcon(binome.state) }}
-                </v-icon>
-                {{ binome.state }}
-              </v-chip>
-            </v-col>
-          </v-row>
+                Programmer un appel
+              </v-btn>
 
-          <v-divider class="my-5" />
+              <v-btn
+                block
+                color="orange-darken-1"
+                variant="tonal"
+                class="mb-2 justify-start"
+                rounded="lg"
+                prepend-icon="mdi-pause-circle-outline"
+                @click="showPauseDialog = true"
+              >
+                Programmer une pause
+              </v-btn>
 
-          <div class="mb-4">
-            <div class="text-subtitle-1 text-secondary mb-1">Intervenant :</div>
-            <div class="text-body-1 font-weight-medium">
-              {{ binome.employee.first_name }} {{ binome.employee.last_name }}
+              <v-btn
+                block
+                color="blue-grey"
+                variant="tonal"
+                class="justify-start"
+                rounded="lg"
+                prepend-icon="mdi-account-switch-outline"
+                @click="openChangeEmployee"
+              >
+                Changer d'intervenant
+              </v-btn>
             </div>
-          </div>
-
-          <div class="mb-4">
-            <div class="text-subtitle-1 text-secondary mb-1">Date Première Intervention</div>
-            <div class="text-body-1 font-weight-medium">
-              {{ formatDate(binome.first_intervention_date) }}
-            </div>
-          </div>
-
-          <div>
-            <div class="text-subtitle-1 text-secondary mb-1">Autres informations utiles</div>
-            <div class="text-body-1">{{ binome.note || "—" }}</div>
           </div>
         </v-card>
 
-        <v-card v-else class="pa-6 d-flex justify-center align-center elevation-2">
-          <v-progress-circular indeterminate color="primary" />
+        <v-card v-else class="pa-12 d-flex justify-center align-center rounded-xl elevation-0 border-thin" height="400">
+          <v-progress-circular indeterminate color="primary" size="64" width="6" />
         </v-card>
       </v-col>
 
-      <!-- === Colonne droite : Timeline === -->
-      <v-col cols="12" md="8" class="pa-3 d-flex flex-column">
-        <div v-if="completedCalls.length || nextCall" class="timeline-scroll">
-          <!-- Dernier appel -->
-          <BinomeTimeline
-            :events="[completedCalls[completedCalls.length - 1]]"
-            :nextCall="nextCall"
-            :binomeState="binome.state"
-          />
-
-          <!-- Bouton pour afficher l’historique -->
-          <div v-if="completedCalls.length > 1" class="text-center my-4">
+      <v-col cols="12" md="8" lg="7" class="pa-3 d-flex flex-column" style="max-height: 100%;">
+        
+        <template v-if="binome">
+          
+          <div v-if="completedCalls.length > 1" class="d-flex justify-center mb-2 flex-shrink-0">
             <v-btn
               variant="text"
+              rounded="pill"
               color="primary"
+              class="text-caption font-weight-bold px-6"
               @click="showHistory = !showHistory"
             >
-              {{ showHistory ? "Masquer l’historique" : "Afficher l’historique" }}
-              <v-icon end>
-                {{ showHistory ? "mdi-chevron-up" : "mdi-chevron-down" }}
+              <v-icon start class="mr-1">
+                {{ showHistory ? "mdi-chevron-up" : "mdi-history" }}
               </v-icon>
+              {{ showHistory ? "Masquer l'historique" : "Afficher l'historique complet" }}
             </v-btn>
           </div>
 
-          <!-- Historique (anciens appels) -->
-          <transition name="fade">
-            <div v-if="showHistory">
+          <div class="timeline-container px-2">
+            <transition name="fade" mode="out-in">
               <BinomeTimeline
-                :events="completedCalls.slice(0, -1)"
-                :nextCall="null"
-                :binomeState="binome.state"
+                 :key="showHistory ? 'full' : 'short'"
+                 :events="visibleCalls"
+                 :nextCall="nextCall"
+                 :binomeState="binome?.state" 
+                 @conforme="markConforme"
+                 @nonConforme="markNonConforme"
+                 @reprogram="openReprogramModal"
+               />
+            </transition>
+          </div>
+
+          <v-dialog v-model="reprogramDialog" max-width="400px">
+            <v-card class="pa-5 rounded-xl">
+              <h3 class="text-h6 font-weight-bold mb-1">Reprogrammer</h3>
+              <p class="text-body-2 text-medium-emphasis mb-4">Choisissez une nouvelle date pour cet appel.</p>
+              <v-text-field
+                v-model="newDate"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+                color="primary"
               />
-            </div>
-          </transition>
+              <div class="d-flex justify-end mt-2">
+                <v-btn variant="text" class="mr-2" @click="reprogramDialog = false">Annuler</v-btn>
+                <v-btn color="primary" elevation="0" @click="reprogramCall">Valider</v-btn>
+              </div>
+            </v-card>
+          </v-dialog>
+
+          <ManualCallDialog 
+            v-model="showManualCallDialog"
+            :binome-id="binome.id"
+            @success="fetchBinomeDetails"
+          />
+
+          <BinomePauseDialog
+            v-model="showPauseDialog"
+            :binome-id="binome.id"
+            @success="fetchBinomeDetails"
+          />
+
+        </template>
+
+        <div v-else class="d-flex justify-center align-center fill-height">
+          <v-progress-circular indeterminate color="primary" />
         </div>
 
-        <!-- Modale reprogrammation -->
-        <v-dialog v-model="reprogramDialog" max-width="400px">
-          <v-card class="pa-4 rounded-lg">
-            <h3 class="text-h6 mb-3">Reprogrammer l'appel</h3>
-            <v-text-field
-              v-model="newDate"
-              type="date"
-              label="Nouvelle date"
-              outlined
-            />
-            <v-card-actions class="d-flex justify-end mt-3">
-              <v-btn variant="text" @click="reprogramDialog = false">
-                Annuler
-              </v-btn>
-              <v-btn color="primary" @click="reprogramCall">Valider</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
       </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import api from "@/services/api";
+
+// --- IMPORTS COMPOSANTS ---
 import BinomeTimeline from "@/components/BinomeTimeline.vue";
+import ManualCallDialog from "@/components/ManualCallDialog.vue";
+import BinomeNote from "@/components/BinomeNote.vue"; 
+import BinomePauseDialog from "@/components/BinomePauseDialog.vue"; // <--- Import
 
 const route = useRoute();
 const binome = ref(null);
 const completedCalls = ref([]);
 const nextCall = ref(null);
+const showHistory = ref(false);
+
 const reprogramDialog = ref(false);
 const newDate = ref("");
-const showHistory = ref(false);
+
+// Gestion des Modales
+const showManualCallDialog = ref(false);
+const showPauseDialog = ref(false); // <--- Nouvelle ref
+
+const visibleCalls = computed(() => {
+  if (!completedCalls.value || completedCalls.value.length === 0) return [];
+  if (showHistory.value) return completedCalls.value;
+  return [completedCalls.value[completedCalls.value.length - 1]];
+});
 
 async function fetchBinomeDetails() {
   try {
@@ -138,9 +222,7 @@ async function fetchBinomeDetails() {
     binome.value = data.binome;
     completedCalls.value = data.completed_calls || [];
     nextCall.value = data.next_call || null;
-  } catch (e) {
-    console.error("Erreur chargement binôme :", e);
-  }
+  } catch (e) { console.error(e); }
 }
 
 async function markConforme(note) {
@@ -155,95 +237,58 @@ async function markNonConforme() {
   await fetchBinomeDetails();
 }
 
-function openReprogramModal() {
-  reprogramDialog.value = true;
-}
+function openReprogramModal() { reprogramDialog.value = true; }
 
 async function reprogramCall() {
   if (!newDate.value || !nextCall.value) return;
-  await api.post(`/calls/${nextCall.value.id}/reprogrammer/`, {
-    new_date: newDate.value,
-  });
+  await api.post(`/calls/${nextCall.value.id}/reprogrammer/`, { new_date: newDate.value });
   reprogramDialog.value = false;
   await fetchBinomeDetails();
 }
 
+// --- Placeholders ---
+function openChangeEmployee() { console.log("TODO: Change Employee"); }
+
 onMounted(fetchBinomeDetails);
 
+// --- Formatters ---
 function formatDate(dateStr) {
   if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  return new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
 function getStateColor(state) {
   switch (state) {
-    case "Conforme":
-      return "success";
-    case "Non conforme":
-      return "error";
-    case "À appeler":
-      return "warning";
-    case "En retard":
-      return "primary";
-    default:
-      return "grey";
+    case "Conforme": return "success";
+    case "Non conforme": return "error";
+    case "À appeler": return "warning";
+    case "En retard": return "error";
+    default: return "grey";
   }
 }
 
 function getStateIcon(state) {
   switch (state) {
-    case "Conforme":
-      return "mdi-check-circle";
-    case "Non conforme":
-      return "mdi-close-circle";
-    case "À appeler":
-      return "mdi-phone";
-    case "En retard":
-      return "mdi-alert";
-    default:
-      return "mdi-help-circle";
+    case "Conforme": return "mdi-check-circle";
+    case "Non conforme": return "mdi-close-circle";
+    case "À appeler": return "mdi-phone";
+    case "En retard": return "mdi-clock-alert";
+    default: return "mdi-help-circle";
   }
 }
 </script>
 
 <style scoped>
-.v-card {
-  border-radius: 16px;
-}
-.text-secondary {
-  color: #6b7280;
-}
-
-.timeline-scroll {
-  max-height: calc(100vh - 150px);
+.timeline-container {
+  flex: 1 1 auto;
   overflow-y: auto;
-  padding-right: 8px;
-  scrollbar-width: thin;
+  min-height: 0;
+  padding-bottom: 3rem !important;
 }
+.timeline-container::-webkit-scrollbar { width: 6px; }
+.timeline-container::-webkit-scrollbar-thumb { background-color: #e0e0e0; border-radius: 4px; }
 
-.timeline-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.timeline-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(42, 66, 82, 0.3);
-  border-radius: 4px;
-}
-.timeline-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(42, 66, 82, 0.5);
-}
-
-/* Animation simple pour l’historique */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.25s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

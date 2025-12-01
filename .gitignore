@@ -15,7 +15,6 @@ venv/
 *.log
 staticfiles/
 media/
-db.sqlite3
 
 # IDE / OS
 .vscode/

@@ -1,14 +1,15 @@
 # app/views/binomes/base.py
-from datetime import date, timedelta
-
+from datetime import date, timedelta, datetime
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..models import Binome
+from ..models import Binome, CallTemplate
 from ..serializers import BinomeSerializer, CallSerializer
 from ..services.binome_service import BinomeService
+from ..services.pause_service import PauseService
+from ..services.call_service import CallService
 
 import locale
 
@@ -197,3 +198,86 @@ class BinomeViewSet(viewsets.ModelViewSet):
                 grouped[key].append(serialized)
 
         return Response(grouped)
+    
+    # ============================================================
+    # 📞 GESTION APPELS MANUELS
+    # ============================================================
+
+    @action(detail=False, methods=["get"], url_path="manual-templates")
+    def manual_templates(self, request):
+        """
+        Renvoie uniquement les templates 'neutres' (sans automatisme).
+        On exclut ceux qui ont des règles de calcul (offset ou récurrence)
+        pour éviter de casser le cycle automatique.
+        """
+        templates = CallTemplate.objects.filter(
+            offset_weeks__isnull=True,
+            recurrence_months__isnull=True
+        ).order_by('name')
+
+        data = [{"id": t.id, "name": t.name, "type": t.type} for t in templates]
+        return Response(data)
+
+    @action(detail=True, methods=["post"], url_path="schedule-manual")
+    def schedule_manual(self, request, pk=None):
+        """Crée un appel manuel sans perturber le cycle auto."""
+        binome = self.get_object()
+        
+        template_id = request.data.get("template_id")
+        date_str = request.data.get("date")
+        title = request.data.get("title")
+
+        if not template_id or not date_str:
+            return Response(
+                {"error": "Template et date sont obligatoires."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            CallService.create_manual_call(
+                binome=binome,
+                template_id=template_id,
+                scheduled_date=date_str,
+                title=title
+            )
+            # On force la mise à jour de l'état du binôme (au cas où la date est passée)
+            BinomeService(binome).update_state()
+            
+            return Response({"status": "success"}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST) 
+        
+        
+    # ============================================================
+    # ⏸️ GESTION PAUSES
+    # ============================================================
+
+    @action(detail=True, methods=["post"], url_path="schedule-pause")
+    def schedule_pause(self, request, pk=None):
+        """Programme une pause et décale le planning."""
+        binome = self.get_object()
+        start_date_str = request.data.get("start_date")
+        end_date_str = request.data.get("end_date")
+
+        if not start_date_str or not end_date_str:
+            return Response(
+                {"error": "Les dates de début et de fin sont requises."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Conversion des chaînes en objets date
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+
+            service = PauseService(binome)
+            service.create_pause(start_date, end_date)
+
+            return Response({"status": "success"}, status=status.HTTP_201_CREATED)
+        
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Log l'erreur réelle en console pour le débug
+            print(f"Erreur schedule_pause: {e}")
+            return Response({"error": "Erreur interne lors de la création de la pause."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
