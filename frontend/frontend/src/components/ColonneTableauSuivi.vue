@@ -27,7 +27,7 @@
           >
             <BinomeCard
               :binome="b"
-              :nextCallType="b.next_call?.template_type"
+              :nextCallType="b.next_call?.template.type"
             />
           </v-responsive>
         </template>

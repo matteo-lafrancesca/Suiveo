@@ -111,7 +111,6 @@ function goToBinome() {
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 .hover-card:hover {
-  transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 </style>
