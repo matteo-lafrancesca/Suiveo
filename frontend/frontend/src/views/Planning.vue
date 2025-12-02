@@ -1,46 +1,62 @@
 <template>
-  <v-container fluid class="pa-8 content-root text-center">
-    <div class="d-flex justify-center align-center mb-6">
-      <v-btn icon="mdi-chevron-left" variant="text" color="primary" @click="previousWeek" />
+  <v-container fluid class="h-screen-offset bg-grey-lighten-4 pa-6 overflow-hidden d-flex flex-column">
+    
+    <div class="d-flex justify-center align-center mb-4 flex-shrink-0">
+      <v-btn 
+        icon="mdi-chevron-left" 
+        variant="tonal" 
+        size="small" 
+        color="grey-darken-2" 
+        @click="previousWeek" 
+      />
 
-      <div class="d-flex flex-column align-center mx-4">
-        <!-- Ligne principale -->
-        <div class="d-flex align-center text-primary text-h5 font-weight-bold">
-          <span>Semaine&nbsp;</span>
-
-          <!-- 🗓️ Édition inline sans input -->
+      <div class="d-flex flex-column align-center mx-6">
+        <div class="d-flex align-center text-h5 font-weight-bold text-grey-darken-3">
+          <span class="mr-2">Semaine</span>
           <span
             ref="weekSpan"
             contenteditable="true"
-            class="editable-text"
+            class="editable-text text-primary"
             @blur="onWeekEdit"
-            @keydown.enter.prevent="onWeekEdit"
+            @keydown.enter.prevent="$event.target.blur()"
           >
             {{ weekNumber }}
           </span>
-
-          <span class="mx-2">•</span>
-
+          <span class="mx-3 text-grey-lighten-1">•</span>
           <span
             ref="yearSpan"
             contenteditable="true"
-            class="editable-text"
+            class="editable-text text-primary"
             @blur="onYearEdit"
-            @keydown.enter.prevent="onYearEdit"
+            @keydown.enter.prevent="$event.target.blur()"
           >
             {{ year }}
           </span>
         </div>
-
-        <!-- Ligne secondaire -->
-        <span class="text-h6 text-medium-emphasis mt-2">{{ weekRange }}</span>
+        <div class="d-flex align-center mt-1">
+            <v-icon size="14" color="grey" class="mr-1">mdi-calendar-range</v-icon>
+            <span class="text-caption text-uppercase font-weight-bold text-grey">{{ weekRange }}</span>
+        </div>
       </div>
 
-      <v-btn icon="mdi-chevron-right" variant="text" color="primary" @click="nextWeek" />
+      <v-btn 
+        icon="mdi-chevron-right" 
+        variant="tonal" 
+        size="small" 
+        color="grey-darken-2" 
+        @click="nextWeek" 
+      />
     </div>
 
-    <!-- Contenu -->
-    <v-row no-gutters class="d-flex align-stretch justify-center">
+    <div v-if="loading" class="d-flex justify-center align-center flex-grow-1">
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+    </div>
+
+    <div 
+        v-else 
+        class="d-flex flex-grow-1 w-100" 
+        style="gap: 16px; overflow-x: auto; min-height: 0;"
+    >
       <ColonnePlanning
         v-for="day in planning.days"
         :key="day.date"
@@ -48,7 +64,8 @@
         :date="day.date"
         :items="day.binomes"
       />
-    </v-row>
+    </div>
+
   </v-container>
 </template>
 
@@ -61,32 +78,35 @@ const planning = ref({ days: [] });
 const weekNumber = ref(0);
 const year = ref(new Date().getFullYear());
 const weekRange = ref("");
-
+const loading = ref(false);
 const weekSpan = ref(null);
 const yearSpan = ref(null);
 
+// ... (Garder les fonctions fetchPlanning, previousWeek, etc. identiques au code précédent)
+// Je remets les fonctions pour que tu puisses copier-coller tout le bloc si besoin
+
 async function fetchPlanning(week = null, customYear = null) {
+  loading.value = true;
   try {
     const params = new URLSearchParams();
     if (week) params.append("week", week);
     if (customYear) params.append("year", customYear);
 
     const { data } = await api.get(`/binomes/planning/?${params.toString()}`);
-    planning.value = data;
-    weekNumber.value = data.week_number;
-    year.value = data.year;
+    
+    planning.value = data || { days: [] };
+    if(data.week_number) weekNumber.value = data.week_number;
+    if(data.year) year.value = data.year;
 
-    const monday = new Date(data.monday);
-    const friday = new Date(data.friday);
-    weekRange.value = `${monday.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-    })} → ${friday.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-    })}`;
+    if (data.monday && data.friday) {
+        const monday = new Date(data.monday);
+        const friday = new Date(data.friday);
+        weekRange.value = `${monday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - ${friday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`;
+    }
   } catch (e) {
     console.error(e);
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -110,21 +130,21 @@ function nextWeek() {
   fetchPlanning(next, nextYear);
 }
 
-// ✅ Quand on valide l'édition inline
-function onWeekEdit() {
-  const val = parseInt(weekSpan.value.innerText.trim());
+function onWeekEdit(e) {
+  const val = parseInt(e.target.innerText.trim());
   if (!isNaN(val) && val >= 1 && val <= 53) {
     fetchPlanning(val, year.value);
   } else {
-    weekSpan.value.innerText = weekNumber.value; // Reset si invalide
+    e.target.innerText = weekNumber.value;
   }
 }
-function onYearEdit() {
-  const val = parseInt(yearSpan.value.innerText.trim());
+
+function onYearEdit(e) {
+  const val = parseInt(e.target.innerText.trim());
   if (!isNaN(val) && val >= 2000 && val <= 2100) {
     fetchPlanning(weekNumber.value, val);
   } else {
-    yearSpan.value.innerText = year.value;
+    e.target.innerText = year.value;
   }
 }
 
@@ -132,20 +152,25 @@ onMounted(() => fetchPlanning());
 </script>
 
 <style scoped>
+/* Ajuste '64px' selon la hauteur de ton Header global (logo Suiveo, profil, etc.) */
+.h-screen-offset {
+  height: calc(100vh - 64px); 
+}
+
 .editable-text {
-  cursor: text;
-  display: inline-block;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
   min-width: 2ch;
+  display: inline-block;
   text-align: center;
-  outline: none;
-  border-bottom: 1px dashed transparent;
-  transition: border-color 0.2s ease;
 }
 .editable-text:hover {
-  border-bottom: 1px dashed var(--v-primary-base);
+  background-color: rgba(var(--v-theme-primary), 0.1);
 }
 .editable-text:focus {
-  border-bottom: 1px solid var(--v-primary-base);
-  background-color: transparent;
+  outline: 2px solid rgb(var(--v-theme-primary));
+  background-color: white;
 }
 </style>

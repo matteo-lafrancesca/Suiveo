@@ -1,50 +1,55 @@
 <template>
-  <v-col
-    cols="12"
-    md="2"
-    class="d-flex flex-column pa-3 colonne-planning"
-  >
+  <div class="d-flex flex-column h-100" style="flex: 1; min-width: 240px; max-width: 100%;">
+    
     <v-sheet
-      color="background"
-      class="d-flex flex-column rounded-xl elevation-3 pa-4"
-      style="height: 73vh;"
+      class="d-flex flex-column rounded-lg elevation-0 border h-100 w-100"
+      :class="isToday ? 'bg-blue-lighten-5' : 'bg-grey-lighten-5'"
+      :style="isToday ? 'border-color: rgba(var(--v-theme-primary), 0.5) !important;' : ''"
     >
-      <!-- Titre -->
-      <div class="d-flex justify-center align-center mb-4">
-        <span class="text-h6 font-weight-bold text-primary text-center">
-          {{ titre }}
-        </span>
+      <div 
+        class="pa-3 flex-shrink-0 d-flex align-center justify-space-between rounded-t-lg bg-white border-b"
+        :style="`border-top: 4px solid ${isToday ? 'rgb(var(--v-theme-primary))' : '#E0E0E0'};`"
+      >
+        <div class="d-flex flex-column">
+          <span class="text-subtitle-2 font-weight-bold text-uppercase text-grey-darken-2">
+            {{ dayName }}
+          </span>
+          <span class="text-h6 font-weight-bold text-grey-darken-3" style="line-height: 1;">
+            {{ formattedDate }}
+          </span>
+        </div>
+        
+        <v-chip 
+           v-if="items.length > 0"
+            size="small" 
+            variant="tonal" 
+            :color="isToday ? 'primary' : 'grey'" 
+            class="font-weight-bold"
+        >
+          {{ items.length }}
+        </v-chip>
       </div>
 
-      <!-- Liste des binômes -->
-      <v-sheet
-        color="background"
-        class="flex-grow-1 overflow-y-auto pa-3 rounded-lg d-flex flex-column align-center"
-        style="min-height: 0;"
-      >
+      <div class="flex-grow-1 pa-2 custom-scrollbar" style="overflow-y: auto; min-height: 0;">
         <template v-if="items.length">
-          <v-responsive
-            v-for="b in items"
-            :key="b.id"
-            class="mb-4"
-            max-width="460"
-            width="100%"
-          >
-            <BinomeCard
-              :binome="b"
-              :nextCallType="b.next_call?.template_type"
-            />
-          </v-responsive>
+          <div v-for="b in items" :key="b.id" class="mb-3">
+             <BinomeCard
+               :binome="b"
+               :nextCallType="b.next_call?.template_type"
+               class="elevation-1 border-sm" 
+             />
+          </div>
         </template>
-      </v-sheet>
+        </div>
     </v-sheet>
-  </v-col>
+  </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import BinomeCard from "@/components/BinomeCard.vue";
 
-defineProps({
+const props = defineProps({
   titre: String,
   date: String,
   items: {
@@ -52,28 +57,43 @@ defineProps({
     required: true,
   },
 });
+
+const dayName = computed(() => {
+    if(!props.date) return props.titre;
+    const d = new Date(props.date);
+    return d.toLocaleDateString('fr-FR', { weekday: 'long' });
+});
+
+const formattedDate = computed(() => {
+    if(!props.date) return '';
+    const d = new Date(props.date);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+});
+
+const isToday = computed(() => {
+    if(!props.date) return false;
+    const today = new Date();
+    const colDate = new Date(props.date);
+    return today.toDateString() === colDate.toDateString();
+});
 </script>
 
 <style scoped>
-/* ✅ élargit légèrement chaque colonne */
-.colonne-planning {
-  flex: 1 1 22%;
-  max-width: 20%;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
 }
-
-/* Meilleure respiration entre les colonnes */
-.v-row {
-  gap: 12px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-/* Ajustement du titre */
-.text-h6 {
-  font-size: 1.15rem;
-  font-weight: 700;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
 }
-
-/* Style du texte d’état vide */
-.text-secondary {
-  color: #64748b;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 </style>

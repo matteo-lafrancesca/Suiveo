@@ -1,15 +1,17 @@
 # app/views/binomes/base.py
 from datetime import date, timedelta, datetime
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..models import Binome, CallTemplate
-from ..serializers import BinomeSerializer, CallSerializer
+from ..models import Binome, CallTemplate, Employee
+from ..serializers import BinomeEnrichiSerializer, BinomeSerializer, CallSerializer
 from ..services.binome_service import BinomeService
 from ..services.pause_service import PauseService
 from ..services.call_service import CallService
+
 
 import locale
 
@@ -44,46 +46,19 @@ class BinomeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="enrichis")
     def enrichis(self, request):
-        """Retourne la liste des binômes enrichie (format plat pour le front)."""
-        enriched = BinomeService.get_all_enriched()
-        data = []
-
-        for e in enriched:
-            binome = e["binome"]
-            last_call = e["last_call"]
-            next_call = e["next_call"]
-
-            serialized = BinomeSerializer(binome).data
-
-            # Dernier appel (si existant)
-            serialized["last_call"] = (
-                {
-                    "template_name": last_call.template.name if last_call and last_call.template else "—",
-                    "actual_date": last_call.actual_date if last_call else None,
-                }
-                if last_call
-                else None
-            )
-
-            # Prochain appel (si existant)
-            serialized["next_call"] = (
-                {
-                    "template_name": next_call.template.name if next_call and next_call.template else "—",
-                    "template_type": next_call.template.type if next_call and next_call.template else None,
-                    "scheduled_date": next_call.scheduled_date if next_call else None,
-                    "week_number": (
-                        next_call.scheduled_date.isocalendar()[1]
-                        if next_call and next_call.scheduled_date
-                        else None
-                    ),
-                }
-                if next_call
-                else None
-            )
-
-            data.append(serialized)
-
-        return Response(data)
+        """
+        Retourne la liste des binômes enrichie via le Serializer Intelligent.
+        Plus besoin de boucle for manuelle ici !
+        """
+        # 1. On récupère les binômes avec les relations pour éviter les requêtes N+1
+        queryset = Binome.objects.select_related("client", "employee").all()
+        
+        # 2. On laisse le Serializer faire tout le travail de calcul (noms, couleurs, tri...)
+        serializer = BinomeEnrichiSerializer(queryset, many=True)
+        
+        # 3. On renvoie le résultat
+        return Response(serializer.data)    
+    
     # ============================================================
     # 🧭 TIMELINE
     # ============================================================
@@ -281,3 +256,120 @@ class BinomeViewSet(viewsets.ModelViewSet):
             # Log l'erreur réelle en console pour le débug
             print(f"Erreur schedule_pause: {e}")
             return Response({"error": "Erreur interne lors de la création de la pause."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+   
+    # ============================================================
+    # 🔄 CHANGEMENT D'INTERVENANT
+    # ============================================================
+
+    @action(detail=True, methods=["get"], url_path="available-employees")
+    def available_employees(self, request, pk=None):
+        """
+        Retourne la liste des employés qui ne sont PAS déjà en binôme avec ce client.
+        (Même si on supprime l'actuel juste après, c'est mieux de filtrer).
+        """
+        binome = self.get_object()
+        client_id = binome.client.id
+        
+        # On exclut les employés qui ont déjà un binôme avec ce client (sauf l'actuel, mais on va le changer)
+        # Dans la logique stricte : on veut tous les employés sauf celui du binôme actuel 
+        # (et éventuellement d'autres si le client a plusieurs binômes, ce qui est rare mais possible).
+        
+        busy_employees_ids = Binome.objects.filter(client_id=client_id).values_list('employee_id', flat=True)
+        
+        # On veut tous les employés SAUF ceux déjà liés au client
+        available = Employee.objects.exclude(id__in=busy_employees_ids).order_by('last_name', 'first_name')
+        
+        data = [{"id": e.id, "name": f"{e.first_name} {e.last_name}"} for e in available]
+        return Response(data)
+
+    @action(detail=True, methods=["post"], url_path="change-employee")
+    def change_employee(self, request, pk=None):
+        old_binome = self.get_object()
+        
+        new_employee_id = request.data.get("employee_id")
+        new_start_date_str = request.data.get("start_date")
+        # On récupère le rythme (ou on garde l'ancien)
+        new_rhythm = request.data.get("rhythm", old_binome.rhythm)
+        
+        # 👇 AJOUT : On récupère la note
+        # Si "note" est dans la requête, on l'utilise. Sinon, on garde l'ancienne.
+        new_note = request.data.get("note", old_binome.note)
+
+        if not new_employee_id or not new_start_date_str:
+            return Response({"error": "Intervenant et date de début requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                client_id = old_binome.client.id
+                
+                old_binome.delete()
+
+                new_data = {
+                    "client_id": client_id,
+                    "employee_id": new_employee_id,
+                    "first_intervention_date": new_start_date_str,
+                    "rhythm": int(new_rhythm),
+                    "note": new_note  # 👈 On injecte la note ici
+                }
+                
+                new_binome = BinomeService.create_with_first_call(new_data)
+                
+                return Response({
+                    "status": "success", 
+                    "new_binome_id": new_binome.id
+                }, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Erreur changement intervenant: {e}")
+            return Response({"error": "Erreur interne."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        """
+        1. Supprime le binôme actuel.
+        2. Crée un nouveau binôme avec le nouvel intervenant.
+        3. Retourne l'ID du nouveau binôme pour redirection.
+        """
+        old_binome = self.get_object()
+        
+        new_employee_id = request.data.get("employee_id")
+        new_start_date_str = request.data.get("start_date")
+        # 👇 AJOUT : On regarde si un nouveau rythme est envoyé, sinon on garde l'ancien
+        new_rhythm = request.data.get("rhythm", old_binome.rhythm)
+
+        if not new_employee_id or not new_start_date_str:
+            return Response({"error": "Intervenant et date de début requis."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                # On sauvegarde les infos client avant de supprimer
+                client_id = old_binome.client.id
+                
+                # 1. Suppression de l'ancien
+                old_binome.delete()
+
+                # 2. Création du nouveau
+                new_data = {
+                    "client_id": client_id,
+                    "employee_id": new_employee_id,
+                    "first_intervention_date": new_start_date_str,
+                    "rhythm": int(new_rhythm) # 👈 AJOUT ICI
+                }
+                
+                new_binome = BinomeService.create_with_first_call(new_data)
+                
+                return Response({
+                    "status": "success", 
+                    "new_binome_id": new_binome.id
+                }, status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Erreur changement intervenant: {e}")
+            return Response({"error": "Erreur interne."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return BinomeEnrichiSerializer
+        return BinomeSerializer

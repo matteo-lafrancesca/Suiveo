@@ -5,7 +5,6 @@
         Créer un binôme
       </h2>
 
-      <!-- 🔴 Message d'erreur -->
       <v-alert
         v-if="errorMessage"
         type="error"
@@ -17,7 +16,6 @@
       </v-alert>
 
       <v-form @submit.prevent="submitForm">
-        <!-- Date -->
         <v-text-field
           v-model="firstIntervention"
           label="Date de première intervention"
@@ -28,7 +26,19 @@
           required
         />
 
-        <!-- Note -->
+        <v-select
+          v-model="selectedRhythm"
+          :items="rhythmOptions"
+          item-title="title"
+          item-value="value"
+          label="Rythme d'intervention"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+          hide-details="auto"
+          required
+        ></v-select>
+
         <v-textarea
           v-model="note"
           label="Note sur le binôme (facultative)"
@@ -39,7 +49,6 @@
           class="mb-6"
         />
 
-        <!-- Actions -->
         <v-card-actions class="d-flex justify-end">
           <v-btn variant="text" @click="cancel">Annuler</v-btn>
           <v-btn
@@ -69,8 +78,17 @@ const employeeId = route.query.employee_id;
 
 const firstIntervention = ref("");
 const note = ref("");
+// 🆕 Valeur par défaut : 1 (Hebdomadaire)
+const selectedRhythm = ref(1);
 const loading = ref(false);
 const errorMessage = ref("");
+
+// 🆕 Options disponibles
+const rhythmOptions = [
+  { title: "Hebdomadaire ", value: 1 },
+  { title: "Bimensuel", value: 2 },
+  { title: "Mensuel", value: 4 },
+];
 
 async function submitForm() {
   errorMessage.value = "";
@@ -83,6 +101,8 @@ async function submitForm() {
       employee_id: employeeId,
       first_intervention_date: firstIntervention.value,
       note: note.value,
+      // 🆕 Envoi du rythme choisi
+      rhythm: selectedRhythm.value,
       state: "Conforme",
     });
 

@@ -1,116 +1,132 @@
 <template>
   <v-card
-    :color="cardColor"
-    rounded="xl"
-    class="pa-4 d-flex align-center text-white mx-auto hover-card"
-    max-width="380"
+    class="binome-card mx-auto d-flex align-center pa-3 mb-2"
+    elevation="0"
+    rounded="lg"
     @click="goToBinome"
+    :style="cardStyle"
   >
-    <!-- Icône principale -->
-    <v-avatar size="48" color="white" class="mr-4">
-      <v-icon size="28" :color="cardColor">
-        {{ icon }}
-      </v-icon>
+    <v-avatar
+      :color="colorTheme"
+      variant="flat" 
+      rounded="lg"
+      size="44"
+      class="mr-4 flex-shrink-0 elevation-1"
+    >
+      <v-icon color="white" size="24">{{ icon }}</v-icon>
     </v-avatar>
 
-    <!-- Nom affiché -->
-    <div>
-      <div class="text-h6 font-weight-bold">
+    <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+      <div class="text-body-2 font-weight-bold text-grey-darken-3 text-truncate">
         {{ displayedName }}
       </div>
-      <div class="text-caption opacity-80">
+
+      <div class="text-caption text-grey-darken-1 text-truncate mt-1">
         {{ subtitle }}
       </div>
     </div>
+
+    <v-icon 
+      icon="mdi-chevron-right" 
+      size="22" 
+      color="grey-lighten-2" 
+      class="chevron-icon"
+    ></v-icon>
+
   </v-card>
 </template>
 
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useTheme } from 'vuetify';
 
 const router = useRouter();
+const theme = useTheme();
 
 const props = defineProps({
   binome: { type: Object, required: true },
-  nextCallType: { type: String, required: false }, // "Client", "Employé", "RDV", "Visite"
+  nextCallType: { type: String, required: false }, 
 });
 
-// 🎨 Couleur principale selon le type d’appel
-const cardColor = computed(() => {
+// --- Navigation ---
+
+const goToBinome = () => {
+  if (props.binome?.id) {
+    router.push(`/binome/${props.binome.id}`);
+  }
+};
+
+// --- Configuration ---
+
+const colorTheme = computed(() => {
   switch (props.nextCallType) {
-    case "Client":
-      return "primary"; // bleu
-    case "Employé":
-      return "secondary"; // violet
-    case "RDV":
-      return "#f59e0b"; // orange
-    case "Visite":
-      return "#10b981"; // vert
-    default:
-      return "#9ca3af"; // gris neutre
+    case "Client": return "blue-darken-1";    
+    case "Employé": return "deep-purple-darken-1"; 
+    case "RDV": return "orange-darken-2";     
+    case "Visite": return "teal-darken-1";    
+    default: return "blue-grey";
   }
 });
 
-// 🎯 Icône selon le type d’appel
 const icon = computed(() => {
   switch (props.nextCallType) {
-    case "Client":
-      return "mdi-account";
-    case "Employé":
-      return "mdi-account-tie";
-    case "RDV":
-      return "mdi-phone"; // prise de rendez-vous
-    case "Visite":
-      return "mdi-home"; // visite sur site
-    default:
-      return "mdi-help-circle";
+    case "Client": return "mdi-account";
+    case "Employé": return "mdi-briefcase-variant";
+    case "RDV": return "mdi-phone-in-talk";
+    case "Visite": return "mdi-map-marker";
+    default: return "mdi-file-document";
   }
 });
 
-// 🧠 Nom affiché selon le type
 const displayedName = computed(() => {
   const c = props.binome?.client;
   const e = props.binome?.employee;
-  switch (props.nextCallType) {
-    case "Client":
-      return c ? `${c.first_name} ${c.last_name}` : "Client inconnu";
-    case "Employé":
-      return e ? `${e.first_name} ${e.last_name}` : "Employé inconnu";
-    default:
-      // Si RDV ou Visite : afficher les deux
-      return c && e ? `${c.first_name} ${c.last_name} – ${e.first_name}` : "Binôme inconnu";
+  
+  if ((props.nextCallType === 'Visite' || props.nextCallType === 'RDV') && c && e) {
+      return `${c.last_name} & ${e.last_name}`;
   }
+  if (props.nextCallType === 'Employé' && e) return `${e.first_name} ${e.last_name}`;
+  if (c) return `${c.first_name} ${c.last_name}`;
+  return "Dossier inconnu";
 });
 
-// 🗒️ Sous-titre explicite
 const subtitle = computed(() => {
   switch (props.nextCallType) {
-    case "Client":
-      return "Appel client à effectuer";
-    case "Employé":
-      return "Appel intervenant à effectuer";
-    case "RDV":
-      return "Prise de rendez-vous à planifier";
-    case "Visite":
-      return "Visite sur site à effectuer";
-    default:
-      return "";
+    case "Client": return "Appel Client";
+    case "Employé": return "Point Intervenant";
+    case "RDV": return "Planification";
+    case "Visite": return "Sur le terrain";
+    default: return "Action";
   }
 });
 
-// 🚀 Navigation vers la fiche du binôme
-function goToBinome() {
-  if (props.binome?.id) router.push(`/binome/${props.binome.id}`);
-}
+// --- Styles CSS ---
+
+const cardStyle = computed(() => {
+    return {
+        borderLeft: `5px solid rgb(var(--v-theme-${colorTheme.value}))`, 
+        borderTop: '1px solid #F0F0F0',
+        borderRight: '1px solid #F0F0F0',
+        borderBottom: '1px solid #F0F0F0',
+        backgroundColor: 'white',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+    };
+});
 </script>
 
 <style scoped>
-.hover-card {
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+.binome-card {
+  border-left-width: 5px !important;
 }
-.hover-card:hover {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+.binome-card:hover {
+  transform: translateX(4px); 
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08) !important;
+}
+
+.binome-card:hover .chevron-icon {
+    color: #757575 !important;
 }
 </style>

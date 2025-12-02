@@ -32,11 +32,21 @@ class Binome(models.Model):
     Lien entre un client & un intervenant, avec un état et des métadonnées.
     """
 
+class Binome(models.Model):
+    """
+    Lien entre un client & un intervenant, avec un état et des métadonnées.
+    """
+
     class BinomeState(models.TextChoices):
         CONFORME = "Conforme", "Conforme"
         NON_CONFORME = "Non conforme", "Non conforme"
         A_APPELER = "À appeler", "À appeler"
         EN_RETARD = "En retard", "En retard"
+
+    class Rhythm(models.IntegerChoices):
+        HEBDOMADAIRE = 1, "Hebdomadaire (Standard)"
+        BIMENSUEL = 2, "Bimensuel (x2)"
+        MENSUEL = 4, "Mensuel (x4)"
 
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="binomes")
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="binomes")
@@ -47,9 +57,14 @@ class Binome(models.Model):
         default=BinomeState.A_APPELER
     )
 
+    rhythm = models.IntegerField(
+        choices=Rhythm.choices,
+        default=Rhythm.HEBDOMADAIRE,
+        verbose_name="Rythme d'intervention"
+    )
+
     first_intervention_date = models.DateField()
     note = models.TextField(blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

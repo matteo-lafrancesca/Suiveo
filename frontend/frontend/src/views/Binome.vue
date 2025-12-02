@@ -98,7 +98,7 @@
                 class="justify-start"
                 rounded="lg"
                 prepend-icon="mdi-account-switch-outline"
-                @click="openChangeEmployee"
+                @click="showChangeEmployeeDialog = true"
               >
                 Changer d'intervenant
               </v-btn>
@@ -174,6 +174,13 @@
             @success="fetchBinomeDetails"
           />
 
+          <ChangeEmployeeDialog
+            v-model="showChangeEmployeeDialog"
+            :binome-id="binome.id"
+            :current-rhythm="binome.rhythm"
+            :current-note="binome.note"
+          />
+
         </template>
 
         <div v-else class="d-flex justify-center align-center fill-height">
@@ -194,7 +201,8 @@ import api from "@/services/api";
 import BinomeTimeline from "@/components/BinomeTimeline.vue";
 import ManualCallDialog from "@/components/ManualCallDialog.vue";
 import BinomeNote from "@/components/BinomeNote.vue"; 
-import BinomePauseDialog from "@/components/BinomePauseDialog.vue"; // <--- Import
+import BinomePauseDialog from "@/components/BinomePauseDialog.vue";
+import ChangeEmployeeDialog from "@/components/ChangeEmployeeDialog.vue"; 
 
 const route = useRoute();
 const binome = ref(null);
@@ -205,9 +213,10 @@ const showHistory = ref(false);
 const reprogramDialog = ref(false);
 const newDate = ref("");
 
-// Gestion des Modales
+// Gestion des Modales (Refs)
 const showManualCallDialog = ref(false);
-const showPauseDialog = ref(false); // <--- Nouvelle ref
+const showPauseDialog = ref(false);
+const showChangeEmployeeDialog = ref(false);
 
 const visibleCalls = computed(() => {
   if (!completedCalls.value || completedCalls.value.length === 0) return [];
@@ -245,9 +254,6 @@ async function reprogramCall() {
   reprogramDialog.value = false;
   await fetchBinomeDetails();
 }
-
-// --- Placeholders ---
-function openChangeEmployee() { console.log("TODO: Change Employee"); }
 
 onMounted(fetchBinomeDetails);
 

@@ -1,137 +1,134 @@
 <template>
-  <v-container fluid class="pa-8 content-root">
-    <v-card class="card-block">
-      <!-- === Titre principal === -->
-      <div class="d-flex justify-space-between align-center mb-4">
-        <h2 class="section-title">
-          <v-icon color="primary" class="mr-2">mdi-account-multiple</v-icon>
-          Liste des Binômes
-        </h2>
-
+  <v-container fluid class="h-screen-offset bg-grey-lighten-4 pa-6 overflow-hidden">
+    <v-card class="elevation-0 rounded-lg border h-100 d-flex flex-column">
+      
+      <div class="px-6 py-4 d-flex align-center justify-space-between border-b bg-white flex-shrink-0">
         <div class="d-flex align-center">
+            <v-avatar color="primary" variant="tonal" size="40" class="mr-3 rounded-lg">
+                <v-icon color="primary">mdi-format-list-bulleted</v-icon>
+            </v-avatar>
+            <div>
+                <h2 class="text-h6 font-weight-bold text-grey-darken-3 mb-0">Gestion des Binômes</h2>
+                <span class="text-caption text-grey-darken-1">{{ filteredBinomes.length }} dossiers actifs</span>
+            </div>
+        </div>
+
+        <div class="d-flex align-center" style="gap: 12px; width: 400px;">
           <v-text-field
             v-model="searchQuery"
-            placeholder="Rechercher un binôme..."
-            density="comfortable"
+            placeholder="Rechercher..."
+            density="compact"
             hide-details
             variant="outlined"
             prepend-inner-icon="mdi-magnify"
-            class="search-bar mr-4"
+            class="bg-white rounded-lg"
+            clearable
           />
-          <v-progress-circular
-            v-if="loading"
-            indeterminate
-            color="primary"
-            size="28"
-          />
+           <v-btn icon="mdi-refresh" variant="text" color="grey-darken-1" :loading="loading" @click="fetchBinomes"></v-btn>
         </div>
       </div>
 
-      <!-- === Tableau principal === -->
-      <div class="table-wrapper">
-        <v-data-table
-          :headers="headers"
-          :items="filteredBinomes"
-          :loading="loading"
-          class="styled-table"
-          density="comfortable"
-          hover
-          hide-default-footer
-        >
-          <!-- Client -->
-          <template #item.client="{ item }">
-            {{ item.client.first_name }} {{ item.client.last_name }}
-          </template>
+      <v-data-table
+        :headers="headers"
+        :items="filteredBinomes"
+        :loading="loading"
+        :items-per-page="-1"
+        hide-default-footer
+        fixed-header
+        hover
+        density="default"
+        class="flex-grow-1"
+        style="height: 100%; overflow-y: auto;" 
+      >
+        <template v-slot:headers="{ columns, isSorted, getSortIcon, toggleSort }">
+            <tr class="bg-grey-lighten-5">
+                <template v-for="column in columns" :key="column.key">
+                    <th 
+                        class="text-caption font-weight-bold text-uppercase text-grey-darken-1 border-b py-3"
+                        :style="{ width: column.width, cursor: column.sortable ? 'pointer' : 'default' }"
+                        @click="() => column.sortable && toggleSort(column)"
+                    >
+                        <div class="d-flex align-center" :class="column.align === 'end' ? 'justify-end' : (column.align === 'center' ? 'justify-center' : '')">
+                            {{ column.title }}
+                            <v-icon v-if="isSorted(column)" :icon="getSortIcon(column)" size="small" class="ml-1"></v-icon>
+                        </div>
+                    </th>
+                </template>
+            </tr>
+        </template>
 
-          <!-- Salarié -->
-          <template #item.employee="{ item }">
-            {{ item.employee.first_name }} {{ item.employee.last_name }}
-          </template>
-
-          <!-- Dernier appel -->
-          <template #item.last_call="{ item }">
-            <span v-if="item.last_call">
-              {{ item.last_call.template_name }}
-            </span>
-            <span v-else>—</span>
-          </template>
-
-          <!-- Statut de conformité -->
-          <template #item.state="{ item }">
-            <v-chip
-              :color="getStateColor(item.state)"
-              class="text-white font-weight-medium"
-              size="small"
-              label
-            >
-              {{ item.state }}
-            </v-chip>
-          </template>
-
-          <!-- Prochain appel -->
-          <template #item.next_call="{ item }">
-            <span v-if="item.next_call">
-              {{ item.next_call.template_name }}
-            </span>
-            <span v-else>—</span>
-          </template>
-
-          <!-- Semaine du prochain appel -->
-          <template #item.next_call_week="{ item }">
-            <span v-if="item.next_call">
-              Semaine {{ item.next_call.week_number }}
-            </span>
-            <span v-else>—</span>
-          </template>
-
-          <!-- Boutons d’action -->
-          <template #item.actions="{ item }">
-            <div class="d-flex align-center" style="gap: 8px;">
-              <v-btn
-                icon
-                color="primary"
-                variant="text"
-                @click="goToBinome(item.id)"
-              >
-                <v-icon>mdi-eye-outline</v-icon>
-              </v-btn>
-
-              <v-btn
-                icon
-                color="error"
-                variant="text"
-                @click="confirmDelete(item.id)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
+        <template #item.client_name="{ item }">
+            <div class="d-flex align-center py-2">
+                <v-avatar color="blue-lighten-5" rounded="lg" size="36" class="mr-3 text-blue-darken-3 font-weight-bold text-caption">
+                    {{ item.client_initials }}
+                </v-avatar>
+                <div class="d-flex flex-column">
+                    <span class="font-weight-bold text-body-2 text-grey-darken-3">
+                        {{ item.client_name || 'Client Inconnu' }}
+                    </span>
+                    <span class="text-caption text-grey">Client</span>
+                </div>
             </div>
-          </template>
+        </template>
 
-          <!-- Aucun binôme -->
-          <template #no-data>
-            <v-alert color="primary" variant="tonal" class="text-center">
-              Aucun binôme trouvé.
-            </v-alert>
-          </template>
-        </v-data-table>
-      </div>
+        <template #item.employee_name="{ item }">
+             <div class="d-flex align-center py-2">
+                <v-avatar color="purple-lighten-5" rounded="lg" size="36" class="mr-3 text-purple-darken-3 font-weight-bold text-caption">
+                    {{ item.employee_initials }}
+                </v-avatar>
+                <div class="d-flex flex-column">
+                    <span class="font-weight-medium text-body-2 text-grey-darken-3">
+                        {{ item.employee_name || 'Non assigné' }}
+                    </span>
+                    <span class="text-caption text-grey">Intervenant</span>
+                </div>
+            </div>
+        </template>
+
+        <template #item.rhythm_display="{ item }">
+             <v-chip 
+                v-if="item.rhythm_display"
+                size="small" variant="tonal" color="info" class="font-weight-medium" label
+             >
+                <v-icon start size="14">mdi-clock-time-four-outline</v-icon>
+                {{ item.rhythm_display }}
+             </v-chip>
+             <span v-else class="text-caption text-grey">—</span>
+        </template>
+
+        <template #item.state="{ item }">
+          <div class="d-flex align-center" v-if="item.state">
+              <v-icon :color="item.state_color || 'grey'" size="10" class="mr-2">mdi-circle</v-icon>
+              <span class="text-body-2" :class="`text-${item.state_color || 'grey'}`">
+                  {{ item.state }}
+              </span>
+          </div>
+          <span v-else class="text-caption text-grey">Indéfini</span>
+        </template>
+
+        <template #item.week_sort_key="{ item }">
+            <div v-if="item.next_call && item.next_call.week_number" class="d-flex flex-column align-center justify-center">
+                 <v-sheet 
+                    color="grey-lighten-4" rounded 
+                    class="d-flex align-center justify-center font-weight-bold text-grey-darken-3"
+                    height="28" width="40"
+                 >
+                    {{ item.next_call.week_number }}
+                 </v-sheet>
+                 <span class="text-caption text-grey-lighten-2 mt-1" style="font-size: 0.65rem;">
+                    {{ item.next_call.year }}
+                 </span>
+            </div>
+             <span v-else class="text-caption text-grey-lighten-1 d-block text-center">—</span>
+        </template>
+
+        <template #item.actions="{ item }">
+            <div class="d-flex justify-end">
+                <v-btn icon="mdi-arrow-right" variant="text" density="comfortable" color="grey-lighten-1" class="action-btn" @click="goToBinome(item.id)"></v-btn>
+            </div>
+        </template>
+      </v-data-table>
     </v-card>
-
-    <!-- === Dialogue confirmation suppression === -->
-    <v-dialog v-model="confirmVisible" max-width="380px">
-      <v-card class="pa-4 rounded-lg">
-        <h3 class="text-h6 mb-4 font-weight-medium text-primary">
-          Confirmer la suppression
-        </h3>
-        <p class="text-body-2 mb-6">
-          Êtes-vous sûr de vouloir supprimer ce binôme ? Cette action est irréversible.
-        </p>
-        <v-card-actions class="d-flex justify-end">
-          <v-btn variant="text" @click="confirmVisible = false">Annuler</v-btn>
-          <v-btn color="error" @click="deleteConfirmed">Supprimer</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 
@@ -145,128 +142,59 @@ const binomes = ref([]);
 const loading = ref(false);
 const searchQuery = ref("");
 
-// === Suppression ===
-const confirmVisible = ref(false);
-const targetBinomeId = ref(null);
-
-function confirmDelete(id) {
-  targetBinomeId.value = id;
-  confirmVisible.value = true;
-}
-
-async function deleteConfirmed() {
-  if (!targetBinomeId.value) return;
-  confirmVisible.value = false;
-  await api.delete(`/binomes/${targetBinomeId.value}/`);
-  await fetchBinomes();
-}
-
-// === En-têtes du tableau ===
 const headers = [
-  { title: "Client", key: "client", sortable: true },
-  { title: "Salarié", key: "employee", sortable: true },
-  { title: "Dernier appel", key: "last_call", sortable: false },
-  { title: "Statut de conformité", key: "state", sortable: true },
-  { title: "Prochain appel", key: "next_call", sortable: false },
-  { title: "Semaine du prochain appel", key: "next_call_week", sortable: true },
-  { title: "", key: "actions", sortable: false },
+  { title: "Client", key: "client_name", sortable: true, width: '22%' },
+  { title: "Intervenant", key: "employee_name", sortable: true, width: '22%' },
+  { title: "Rythme", key: "rhythm_display", sortable: true, width: '14%' },
+  { title: "Statut", key: "state", sortable: true, width: '14%' },
+  { title: "Prochaine Action", key: "next_call.template_name", sortable: false, width: '18%' },
+  { title: "Sem.", key: "week_sort_key", sortable: true, align: 'center', width: '6%' },
+  { title: "", key: "actions", sortable: false, align: 'end', width: '4%' },
 ];
 
-// === Récupération des données ===
 onMounted(fetchBinomes);
+
 async function fetchBinomes() {
   loading.value = true;
   try {
-    const { data } = await api.get("/binomes/enrichis/");
-    binomes.value = data;
+    const { data } = await api.get("/binomes/enrichis/"); 
+    // Si votre URL est "/binomes/" dans l'api, changez ci-dessus
+    // Assurez-vous que le backend renvoie bien les nouveaux champs
+    binomes.value = data; 
   } finally {
     loading.value = false;
   }
 }
 
-// === Filtrage recherche ===
 const filteredBinomes = computed(() => {
   const query = searchQuery.value.toLowerCase().trim();
   if (!query) return binomes.value;
 
   return binomes.value.filter((b) => {
-    const client = `${b.client.first_name} ${b.client.last_name}`.toLowerCase();
-    const employee = `${b.employee.first_name} ${b.employee.last_name}`.toLowerCase();
-    const state = b.state?.toLowerCase() || "";
-    const lastCall = b.last_call?.template_name?.toLowerCase() || "";
-    const nextCall = b.next_call?.template_name?.toLowerCase() || "";
-    const week = b.next_call?.week_number?.toString() || "";
+    // Sécurisation : on vérifie que les champs existent avant de faire toLowerCase()
+    const cName = b.client_name ? b.client_name.toLowerCase() : '';
+    const eName = b.employee_name ? b.employee_name.toLowerCase() : '';
+    const state = b.state ? b.state.toLowerCase() : '';
+    const rhythm = b.rhythm_display ? b.rhythm_display.toLowerCase() : '';
+    const week = (b.next_call && b.next_call.week_number) ? b.next_call.week_number.toString() : '';
 
     return (
-      client.includes(query) ||
-      employee.includes(query) ||
+      cName.includes(query) ||
+      eName.includes(query) ||
       state.includes(query) ||
-      lastCall.includes(query) ||
-      nextCall.includes(query) ||
+      rhythm.includes(query) ||
       week.includes(query)
     );
   });
 });
 
-// === Couleurs selon le statut ===
-function getStateColor(state) {
-  switch (state) {
-    case "Conforme":
-      return "success";
-    case "Non conforme":
-      return "error";
-    case "À appeler":
-      return "warning";
-    case "En retard":
-      return "primary";
-    default:
-      return "grey";
-  }
-}
-
-// === Navigation ===
 function goToBinome(id) {
   router.push(`/binome/${id}`);
 }
 </script>
 
 <style scoped>
-.card-block {
-  background-color: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  border-top: 3px solid var(--v-primary-base);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: #2a4252;
-}
-.search-bar {
-  background-color: #fff;
-  border-radius: 8px;
-  width: 300px;
-}
-.table-wrapper {
-  max-height: 65vh;
-  overflow-y: auto;
-}
-.styled-table {
-  border-radius: 8px;
-  background-color: #fff;
-}
-.styled-table tbody tr:hover {
-  background-color: rgba(42, 66, 82, 0.05);
-}
-.v-btn {
-  transition: background 0.2s ease;
-}
-.v-btn:hover {
-  background-color: rgba(42, 66, 82, 0.1);
-}
-.v-alert {
-  border-radius: 12px;
-}
+.h-screen-offset { height: calc(100vh - 64px); }
+.action-btn:hover { color: rgb(var(--v-theme-primary)) !important; background-color: rgb(var(--v-theme-primary), 0.1); }
+:deep(.v-data-table__tr:hover td) { background-color: #FAFAFA !important; }
 </style>

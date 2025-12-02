@@ -30,9 +30,8 @@ class CallService:
     def schedule_first_call(binome: Binome):
         """
         Logique centralisée pour créer le TOUT premier appel.
-        Utilisé à la création du binôme ET lors d'un retour de pause précoce.
+        Prend en compte le rythme (multiplicateur) du binôme.
         """
-        # CORRECTION ICI : On filtre pour exclure les templates manuels (offset_weeks=None)
         first_template = CallTemplate.objects.filter(offset_weeks__isnull=False).order_by("offset_weeks").first()
         
         if not first_template:
@@ -41,15 +40,21 @@ class CallService:
         # Calcul du décalage dû aux pauses éventuelles
         pause_delay = PauseService(binome).get_total_delay()
         
-        # Date = Début prestation + Offset Template + Pauses
-        scheduled_date = binome.first_intervention_date + timedelta(weeks=first_template.offset_weeks) + timedelta(days=pause_delay)
+        # Si hebdo (1) -> offset * 1
+        # Si bimensuel (2) -> offset * 2
+        # Si mensuel (4) -> offset * 4
+        adjusted_offset_weeks = first_template.offset_weeks * binome.rhythm
+
+        # Date = Début prestation + Offset ajusté + Pauses
+        scheduled_date = binome.first_intervention_date + timedelta(weeks=adjusted_offset_weeks) + timedelta(days=pause_delay)
 
         return Call.objects.create(
             binome=binome,
             template=first_template,
             title=f"{first_template.name} du {scheduled_date.strftime('%d/%m/%Y')}",
             scheduled_date=scheduled_date,
-        )
+        )    
+    
     # ============================================================
     # ➕ CRÉATION MANUELLE (NOUVEAU)
     # ============================================================
@@ -67,11 +72,12 @@ class CallService:
             title=final_title
         )
 
+
     # ============================================================
     # 🔁 PLANIFICATION AUTOMATIQUE
     # ============================================================
     def schedule_next_call(self):
-        """Programme le prochain appel en tenant compte des pauses."""
+        """Programme le prochain appel en tenant compte des pauses ET du rythme."""
         
         if self.pause_service.is_currently_paused():
             return None
@@ -80,8 +86,6 @@ class CallService:
             return None
 
         # --- 🛡️ GARDE-FOU 🛡️ ---
-        # Si le template est purement manuel (pas d'offset, pas de récurrence),
-        # on ne déclenche PAS de suite automatique.
         if self.template.offset_weeks is None and self.template.recurrence_months is None:
             return None
         # ------------------------
@@ -89,16 +93,16 @@ class CallService:
         next_date = None
         next_template = None
         
-        # 🔄 CAS 1 : Récurrence mensuelle
+        # 🔄 CAS 1 : Récurrence mensuelle (Logique long terme)
+        # Note: Généralement la récurrence mensuelle (ex: point annuel) n'est pas affectée 
+        # par le rythme opérationnel hebdo/bimensuel. On la laisse telle quelle.
         if self.template.recurrence_months:
             base_date = self.call.scheduled_date + relativedelta(months=self.template.recurrence_months)
-            # Ajout des pauses survenues DEPUIS l'appel précédent
             pause_delay = self.pause_service.get_total_delay(since_date=self.call.scheduled_date)
             
             next_date = base_date + timedelta(days=pause_delay)
             next_template = self.template
 
-        # 📑 CAS 2 : Séquence (Offset par rapport au début)
         else:
             next_template = (
                 CallTemplate.objects
@@ -109,7 +113,9 @@ class CallService:
             if not next_template:
                 return None
             
-            theoretical_date = self.binome.first_intervention_date + timedelta(weeks=next_template.offset_weeks)
+            adjusted_offset_weeks = next_template.offset_weeks * self.binome.rhythm
+
+            theoretical_date = self.binome.first_intervention_date + timedelta(weeks=adjusted_offset_weeks)
             total_pause_delay = self.pause_service.get_total_delay()
             
             next_date = theoretical_date + timedelta(days=total_pause_delay)
@@ -122,7 +128,7 @@ class CallService:
                 scheduled_date=next_date,
             )
         return None
-
+    
     # ============================================================
     # ✅ CONFORMITÉ / ❌ NON-CONFORMITÉ
     # ============================================================
