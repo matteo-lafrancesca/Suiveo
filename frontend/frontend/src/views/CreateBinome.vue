@@ -16,14 +16,11 @@
       </v-alert>
 
       <v-form @submit.prevent="submitForm">
-        <v-text-field
+        <DatePickerField
           v-model="firstIntervention"
           label="Date de première intervention"
-          type="date"
-          variant="outlined"
-          density="comfortable"
           class="mb-4"
-          required
+          :rules="[v => !!v || 'Requis']"
         />
 
         <v-select
@@ -69,6 +66,7 @@
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
+import DatePickerField from "@/components/DatePickerField.vue";
 
 const router = useRouter();
 const route = useRoute();

@@ -140,24 +140,58 @@
                  @conforme="markConforme"
                  @nonConforme="markNonConforme"
                  @reprogram="openReprogramModal"
+                 @reopen="reopenCall"
+                 @deleteManual="deleteManualCall"
                />
             </transition>
+            
+            <!-- DEBUG : Afficher les appels en attente -->
+            <div v-if="pendingCalls.length > 1" class="mt-4 pa-4 bg-grey-lighten-4 rounded">
+              <div class="text-caption text-medium-emphasis mb-2">
+                📅 Appels programmés ({{ pendingCalls.length }}) :
+              </div>
+              <div v-for="call in pendingCalls" :key="call.id" class="text-caption">
+                • {{ call.title }} - {{ formatDate(call.scheduled_date) }}
+              </div>
+            </div>
           </div>
 
-          <v-dialog v-model="reprogramDialog" max-width="400px">
+          <v-dialog v-model="reprogramDialog" max-width="500px">
             <v-card class="pa-5 rounded-xl">
-              <h3 class="text-h6 font-weight-bold mb-1">Reprogrammer</h3>
-              <p class="text-body-2 text-medium-emphasis mb-4">Choisissez une nouvelle date pour cet appel.</p>
-              <v-text-field
+              <h3 class="text-h6 font-weight-bold mb-1">Reprogrammer l'appel</h3>
+              <p class="text-body-2 text-medium-emphasis mb-4">
+                L'appel actuel sera archivé et un nouvel appel sera créé.
+              </p>
+              
+              <label class="text-caption font-weight-bold text-medium-emphasis ml-1">Nouvelle date</label>
+              <DatePickerField
                 v-model="newDate"
-                type="date"
+                class="mb-2"
+              />
+
+              <label class="text-caption font-weight-bold text-medium-emphasis ml-1">Motif (ex: Client absent)</label>
+              <v-textarea
+                v-model="reprogramReason"
+                rows="2"
+                auto-grow
+                placeholder="Indiquez pourquoi l'appel est reporté..."
                 variant="outlined"
                 density="comfortable"
                 color="primary"
-              />
-              <div class="d-flex justify-end mt-2">
-                <v-btn variant="text" class="mr-2" @click="reprogramDialog = false">Annuler</v-btn>
-                <v-btn color="primary" elevation="0" @click="reprogramCall">Valider</v-btn>
+                hide-details
+              ></v-textarea>
+
+              <div class="d-flex justify-end mt-4">
+                <v-btn variant="text" class="mr-2 rounded-lg" @click="reprogramDialog = false">Annuler</v-btn>
+                <v-btn 
+                  color="primary" 
+                  elevation="0" 
+                  class="rounded-lg"
+                  :disabled="!newDate"
+                  @click="reprogramCall"
+                >
+                  Valider
+                </v-btn>
               </div>
             </v-card>
           </v-dialog>
@@ -168,18 +202,56 @@
             @success="fetchBinomeDetails"
           />
 
-          <BinomePauseDialog
+          <BinomePauseDialog 
             v-model="showPauseDialog"
             :binome-id="binome.id"
+            :first-intervention-date="binome.first_intervention_date"
             @success="fetchBinomeDetails"
           />
 
           <ChangeEmployeeDialog
             v-model="showChangeEmployeeDialog"
             :binome-id="binome.id"
+            :client-id="binome.client.id"
             :current-rhythm="binome.rhythm"
             :current-note="binome.note"
           />
+
+          <!-- Modal de confirmation de suppression -->
+          <v-dialog v-model="deleteConfirmDialog" max-width="400">
+            <v-card class="rounded-xl">
+              <v-card-title class="text-h6 font-weight-bold pa-4 bg-error text-white">
+                <v-icon start color="white">mdi-alert-circle</v-icon>
+                Confirmer la suppression
+              </v-card-title>
+              
+              <v-card-text class="pa-6">
+                <p class="text-body-1 text-medium-emphasis">
+                  Voulez-vous vraiment supprimer cet appel manuel ?
+                </p>
+                <p class="text-caption text-disabled mt-2">
+                  Cette action est irréversible.
+                </p>
+              </v-card-text>
+
+              <v-card-actions class="pa-4 pt-0">
+                <v-spacer />
+                <v-btn 
+                  variant="text" 
+                  @click="deleteConfirmDialog = false"
+                >
+                  Annuler
+                </v-btn>
+                <v-btn 
+                  color="error"
+                  variant="elevated"
+                  @click="confirmDelete"
+                >
+                  Supprimer
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
 
         </template>
 
@@ -202,21 +274,27 @@ import BinomeTimeline from "@/components/BinomeTimeline.vue";
 import ManualCallDialog from "@/components/ManualCallDialog.vue";
 import BinomeNote from "@/components/BinomeNote.vue"; 
 import BinomePauseDialog from "@/components/BinomePauseDialog.vue";
-import ChangeEmployeeDialog from "@/components/ChangeEmployeeDialog.vue"; 
+import ChangeEmployeeDialog from "@/components/ChangeEmployeeDialog.vue";
+import DatePickerField from "@/components/DatePickerField.vue";
 
 const route = useRoute();
 const binome = ref(null);
 const completedCalls = ref([]);
+const pendingCalls = ref([]);
 const nextCall = ref(null);
 const showHistory = ref(false);
 
+// Refs pour Reprogrammation
 const reprogramDialog = ref(false);
 const newDate = ref("");
+const reprogramReason = ref(""); // <-- NOUVEAU : Motif
 
 // Gestion des Modales (Refs)
 const showManualCallDialog = ref(false);
 const showPauseDialog = ref(false);
 const showChangeEmployeeDialog = ref(false);
+const deleteConfirmDialog = ref(false);
+const callToDelete = ref(null);
 
 const visibleCalls = computed(() => {
   if (!completedCalls.value || completedCalls.value.length === 0) return [];
@@ -230,6 +308,7 @@ async function fetchBinomeDetails() {
     const { data } = await api.get(`/binomes/${id}/details/`);
     binome.value = data.binome;
     completedCalls.value = data.completed_calls || [];
+    pendingCalls.value = data.pending_calls || [];
     nextCall.value = data.next_call || null;
   } catch (e) { console.error(e); }
 }
@@ -246,13 +325,55 @@ async function markNonConforme() {
   await fetchBinomeDetails();
 }
 
-function openReprogramModal() { reprogramDialog.value = true; }
+function openReprogramModal() { 
+  // On reset les champs à l'ouverture
+  newDate.value = "";
+  reprogramReason.value = "";
+  reprogramDialog.value = true; 
+}
 
 async function reprogramCall() {
   if (!newDate.value || !nextCall.value) return;
-  await api.post(`/calls/${nextCall.value.id}/reprogrammer/`, { new_date: newDate.value });
-  reprogramDialog.value = false;
-  await fetchBinomeDetails();
+  
+  try {
+    // On envoie la date ET le motif au backend
+    await api.post(`/calls/${nextCall.value.id}/reprogrammer/`, { 
+      new_date: newDate.value,
+      reason: reprogramReason.value 
+    });
+    
+    reprogramDialog.value = false;
+    await fetchBinomeDetails();
+  } catch (e) {
+    console.error("Erreur reprogrammation:", e);
+  }
+}
+
+async function reopenCall(callId) {
+  try {
+    await api.post(`/calls/${callId}/reopen/`);
+    await fetchBinomeDetails();
+  } catch (e) {
+    console.error("Erreur réouverture:", e);
+  }
+}
+
+function deleteManualCall(callId) {
+  callToDelete.value = callId;
+  deleteConfirmDialog.value = true;
+}
+
+async function confirmDelete() {
+  if (!callToDelete.value) return;
+  
+  try {
+    await api.delete(`/calls/${callToDelete.value}/`);
+    deleteConfirmDialog.value = false;
+    callToDelete.value = null;
+    await fetchBinomeDetails();
+  } catch (e) {
+    console.error("Erreur suppression:", e);
+  }
 }
 
 onMounted(fetchBinomeDetails);

@@ -16,13 +16,15 @@ class BinomeService:
     # 🔁 ÉTATS
     # ============================================================
     def update_state(self):
-        """Met à jour l’état du binôme selon le prochain appel."""
+        """
+        Met à jour l'état du binôme selon le prochain appel.
+        Calcul par semaine :
+        - À appeler : appel prévu cette semaine (lundi-dimanche)
+        - En retard : appel prévu une semaine passée
+        - Conforme : appel prévu semaine future
+        """
+        # 🔒 Protection : "Non conforme" ne peut changer que via mark_conforme()
         if self.binome.state == "Non conforme":
-            return self.binome.state
-
-        # Vérifie s'il y a une pause active (Import local)
-        from .pause_service import PauseService
-        if PauseService(self.binome).is_currently_paused():
             return self.binome.state
 
         next_call = self.get_next_call()
@@ -30,15 +32,24 @@ class BinomeService:
         if not next_call:
             return self.binome.state
 
+        # Calcul des bornes de la semaine courante
         today = timezone.now().date()
-        monday = today - timedelta(days=today.weekday())
-        sunday = monday + timedelta(days=6)
+        current_monday = today - timedelta(days=today.weekday())
+        current_sunday = current_monday + timedelta(days=6)
+        
+        # Calcul des bornes de la semaine de l'appel
+        call_date = next_call.scheduled_date
+        call_monday = call_date - timedelta(days=call_date.weekday())
 
-        if monday <= next_call.scheduled_date <= sunday:
-            new_state = "À appeler"
-        elif next_call.scheduled_date < monday:
+        # Comparaison des semaines
+        if call_monday < current_monday:
+            # L'appel était prévu une semaine passée
             new_state = "En retard"
+        elif call_monday == current_monday:
+            # L'appel est prévu cette semaine
+            new_state = "À appeler"
         else:
+            # L'appel est prévu une semaine future
             new_state = "Conforme"
 
         if new_state != self.binome.state:
@@ -59,6 +70,7 @@ class BinomeService:
         return Call.objects.filter(binome=self.binome).order_by("scheduled_date")
 
     def get_next_call(self):
+        """Retourne le prochain appel non réalisé (incluant appels manuels pour binômes Non conforme)."""
         return Call.objects.filter(binome=self.binome, actual_date__isnull=True).order_by("scheduled_date").first()
 
     def get_last_call(self):
@@ -120,7 +132,16 @@ class BinomeService:
         
         calls_queryset = self.get_calls()
         last_call = CallService.get_last_completed_call(self.binome)
-        next_call = self.get_next_call()
+        
+        # 🔹 Pour binômes "Non conforme" : on cherche le prochain appel non réalisé
+        # (incluant les appels manuels créés) au lieu de se limiter aux appels planifiés
+        if self.binome.state == "Non conforme":
+            next_call = Call.objects.filter(
+                binome=self.binome, 
+                actual_date__isnull=True
+            ).order_by("scheduled_date").first()
+        else:
+            next_call = self.get_next_call()
 
         show_report = False
         if last_call:

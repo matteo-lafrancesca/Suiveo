@@ -54,10 +54,39 @@
 </template>
 
 <script setup>
-const links = [
+import { ref, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+
+const baseLinks = [
   { text: 'Tableau de Suivi', to: '/tableau-suivi' },
   { text: 'Planning', to: '/planning' },
-  { text: 'Liste de Binômes', to: '/liste-binomes' },
-  { text: 'Création et Gestion', to: '/creation-gestion' },
+  { text: 'Dossiers', to: '/liste-binomes' },
+  { text: 'Gestion', to: '/creation-gestion' },
 ];
+
+const links = ref([...baseLinks]);
+const route = useRoute();
+
+function updateLinks() {
+  links.value = [...baseLinks];
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.role === "Admin") {
+        links.value.push({ text: 'Créer Utilisateur', to: '/create-supervisor' });
+      }
+    } catch (e) {
+      console.error("Error parsing user from localStorage", e);
+    }
+  }
+}
+
+onMounted(() => {
+  updateLinks();
+});
+
+watch(() => route.path, () => {
+  updateLinks();
+});
 </script>

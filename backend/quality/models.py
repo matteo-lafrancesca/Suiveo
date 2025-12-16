@@ -25,6 +25,26 @@ class Employee(models.Model):
         return f"{self.last_name} {self.first_name}".strip()
 
 
+class ClientEmployeeHistory(models.Model):
+    """
+    Historique des intervenants ayant travaillé avec un client.
+    Permet de retrouver les anciens intervenants lors d'un changement.
+    """
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="employee_history")
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="client_history")
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Historique Client-Intervenant"
+        verbose_name_plural = "Historiques Client-Intervenant"
+        ordering = ["-started_at"]
+        unique_together = (("client", "employee", "started_at"),)
+
+    def __str__(self):
+        return f"{self.client} × {self.employee} ({self.started_at.date()})"
+
+
 # --- Noyau métier -------------------------------------------------------------
 
 class Binome(models.Model):
@@ -131,15 +151,47 @@ class Call(models.Model):
     """
     Appels de suivi.
     """
+    class CallOutcome(models.TextChoices):
+        CONFORME = "Conforme", "Conforme"
+        NON_CONFORME = "Non conforme", "Non conforme"
+        REPROGRAMME = "Reprogrammé", "Reprogrammé"
+    
     binome = models.ForeignKey(Binome, on_delete=models.CASCADE, related_name="calls")
     template = models.ForeignKey(CallTemplate, on_delete=models.SET_NULL, null=True, blank=True, related_name="calls")
 
     title = models.CharField(max_length=120)
     note = models.TextField(blank=True)
-    report = models.TextField(null = True, blank=True)
+    report = models.TextField(null=True, blank=True)
+    outcome = models.CharField(
+        max_length=20,
+        choices=CallOutcome.choices,
+        null=True,
+        blank=True,
+        verbose_name="Issue de l'appel"
+    )
 
     scheduled_date = models.DateField()
-    actual_date    = models.DateField(null=True, blank=True)
+    actual_date = models.DateField(null=True, blank=True)
+    
+    # Chaîne chronologique : appel précédent réalisé
+    previous_call = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='next_calls',
+        verbose_name="Appel précédent"
+    )
+    
+    # Relation parent → enfant : l'appel suivant créé automatiquement
+    created_next_call = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_by_call',
+        verbose_name="Appel suivant créé"
+    )
 
     class Meta:
         verbose_name = "Appel"

@@ -13,6 +13,9 @@ import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import '@mdi/font/css/materialdesignicons.css'
 
+// --- Import des traductions françaises ---
+import { fr } from 'vuetify/locale'
+
 // --- Import de la police Google DM Sans ---
 import '@fontsource/dm-sans/400.css'
 import '@fontsource/dm-sans/500.css'
@@ -47,6 +50,20 @@ const vuetify = createVuetify({
     defaultSet: 'mdi',
     aliases,
     sets: { mdi },
+  },
+
+  // ✅ Configuration de la langue (Français)
+  locale: {
+    locale: 'fr',
+    fallback: 'fr',
+    messages: { fr },
+  },
+  
+  // ✅ Configuration des dates
+  date: {
+    locale: {
+      fr: 'fr-FR'
+    }
   },
 
   // ✅ Appliquer DM Sans à tous les composants Vuetify

@@ -33,20 +33,16 @@
             :rules="[v => !!v || 'Requis']"
           ></v-select>
 
-          <v-text-field
+          <DatePickerField
             v-model="form.date"
-            type="date"
             label="Date prévue"
-            variant="outlined"
-            density="comfortable"
-            color="primary"
             class="mb-2"
             :min="minDate"
             :rules="[
               v => !!v || 'Requis',
               v => v >= minDate || 'La date ne peut pas être dans le passé'
             ]"
-          ></v-text-field>
+          />
 
           <v-text-field
             v-model="form.title"
@@ -82,6 +78,7 @@
 <script setup>
 import { ref, reactive, watch, computed } from 'vue';
 import api from "@/services/api";
+import DatePickerField from "@/components/DatePickerField.vue";
 
 const props = defineProps({
   modelValue: Boolean,

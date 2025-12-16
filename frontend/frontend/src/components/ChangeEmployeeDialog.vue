@@ -17,7 +17,7 @@
         <template v-else>
           <v-autocomplete
             v-model="form.employee_id"
-            :items="employees"
+            :items="allEmployees"
             item-title="name"
             item-value="id"
             label="Nouvel Intervenant"
@@ -26,18 +26,22 @@
             color="primary"
             class="mb-2"
             :rules="[v => !!v || 'Requis']"
-          ></v-autocomplete>
+          >
+            <template v-slot:item="{ props, item }">
+              <v-list-item v-bind="props">
+                <template v-slot:append v-if="item.raw.isPrevious">
+                  <v-icon color="orange" size="small">mdi-history</v-icon>
+                </template>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
 
-          <v-text-field
+          <DatePickerField
             v-model="form.start_date"
-            type="date"
             label="Date de début d'intervention"
-            variant="outlined"
-            density="comfortable"
-            color="primary"
             class="mb-2"
             :rules="[v => !!v || 'Requis']"
-          ></v-text-field>
+          />
 
           <v-select
             v-model="form.rhythm"
@@ -88,12 +92,13 @@
 import { ref, reactive, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from "@/services/api";
+import DatePickerField from "@/components/DatePickerField.vue";
 
 const props = defineProps({
   modelValue: Boolean,
   binomeId: { type: [Number, String], required: true },
+  clientId: { type: [Number, String], required: true },
   currentRhythm: { type: Number, default: 1 },
-  // 👇 AJOUT PROP
   currentNote: { type: String, default: "" } 
 });
 
@@ -106,8 +111,36 @@ const dialog = computed({
 });
 
 const employees = ref([]);
+const previousEmployees = ref([]);
 const loadingEmployees = ref(false);
 const submitting = ref(false);
+
+const allEmployees = computed(() => {
+  // Les employés disponibles ont déjà le format {id, name}
+  // Les employés de l'historique viennent du serializer avec {id, first_name, last_name}
+  
+  const formatEmployee = (e) => ({
+    id: e.id,
+    name: e.name || `${e.first_name} ${e.last_name}`.trim(),
+    isPrevious: false
+  });
+  
+  const formatPrevious = (e) => ({
+    id: e.id,
+    name: e.name || `${e.first_name} ${e.last_name}`.trim(),
+    isPrevious: true
+  });
+  
+  // Marquer les anciens intervenants
+  const previousIds = new Set(previousEmployees.value.map(e => e.id));
+  
+  const previous = previousEmployees.value.map(formatPrevious);
+  const others = employees.value
+    .filter(e => !previousIds.has(e.id))
+    .map(formatEmployee);
+  
+  return [...previous, ...others];
+});
 
 const rhythmOptions = [
   { title: "Hebdomadaire (Standard)", value: 1 },
@@ -132,8 +165,18 @@ watch(dialog, async (val) => {
 
     loadingEmployees.value = true;
     try {
-      const { data } = await api.get(`/binomes/${props.binomeId}/available-employees/`);
-      employees.value = data;
+      // Charger tous les employés disponibles
+      const { data: allEmps } = await api.get(`/binomes/${props.binomeId}/available-employees/`);
+      employees.value = allEmps || [];
+      
+      // Charger les anciens intervenants de ce client
+      try {
+        const { data: prevEmps } = await api.get(`/binomes/previous-employees/?client_id=${props.clientId}`);
+        previousEmployees.value = prevEmps || [];
+      } catch (e) {
+        console.warn("Pas d'historique pour ce client", e);
+        previousEmployees.value = [];
+      }
     } catch (e) {
       console.error("Erreur chargement employés", e);
     } finally {
@@ -155,7 +198,8 @@ async function submit() {
     });
     
     dialog.value = false;
-    router.replace({ name: 'Binome', params: { id: data.new_binome_id } });
+    // Rediriger vers la page Gestion (liste des dossiers)
+    router.push({ name: 'Liste Binomes' });
 
   } catch (e) {
     console.error("Erreur changement intervenant", e);

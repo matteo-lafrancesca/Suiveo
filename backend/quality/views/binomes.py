@@ -6,7 +6,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ..models import Binome, CallTemplate, Employee
+from ..models import Binome, CallTemplate, Employee, ClientEmployeeHistory
 from ..serializers import BinomeEnrichiSerializer, BinomeSerializer, CallSerializer
 from ..services.binome_service import BinomeService
 from ..services.pause_service import PauseService
@@ -93,13 +93,47 @@ class BinomeViewSet(viewsets.ModelViewSet):
         service = BinomeService(binome)
         calls = service.get_calls()
         completed_calls = [c for c in calls if c.actual_date]
+        pending_calls = [c for c in calls if not c.actual_date]
         next_call = service.get_next_call()
 
         return Response({
             "binome": BinomeSerializer(binome).data,
             "completed_calls": CallSerializer(completed_calls, many=True).data,
+            "pending_calls": CallSerializer(pending_calls, many=True).data,
             "next_call": CallSerializer(next_call).data if next_call else None,
         })
+    
+    # ============================================================
+    # 🔄 HISTORIQUE DES INTERVENANTS
+    # ============================================================
+    @action(detail=False, methods=["get"], url_path="previous-employees")
+    def previous_employees(self, request):
+        """
+        Retourne la liste des anciens intervenants pour un client donné.
+        Utilisé pour afficher les suggestions dans le modal de changement d'intervenant.
+        Query param: client_id
+        """
+        from ..serializers import EmployeeSerializer
+        
+        client_id = request.query_params.get('client_id')
+        if not client_id:
+            return Response({"error": "client_id requis"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Récupérer les IDs des intervenants qui ont déjà travaillé avec ce client
+        history = ClientEmployeeHistory.objects.filter(
+            client_id=client_id
+        ).select_related('employee').order_by('-ended_at')
+        
+        # Extraire les employés (éviter doublons)
+        seen_ids = set()
+        previous_employees = []
+        for record in history:
+            if record.employee.id not in seen_ids:
+                seen_ids.add(record.employee.id)
+                previous_employees.append(record.employee)
+        
+        return Response(EmployeeSerializer(previous_employees, many=True).data)
+    
     # ============================================================
     # 🗓️ PLANNING HEBDOMADAIRE
     # ============================================================
@@ -215,8 +249,10 @@ class BinomeViewSet(viewsets.ModelViewSet):
                 scheduled_date=date_str,
                 title=title
             )
-            # On force la mise à jour de l'état du binôme (au cas où la date est passée)
-            BinomeService(binome).update_state()
+            # On force la mise à jour de l'état seulement si pas "Non conforme"
+            # (sinon on sort de la non-conformité sans validation explicite)
+            if binome.state != "Non conforme":
+                BinomeService(binome).update_state()
             
             return Response({"status": "success"}, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -301,6 +337,14 @@ class BinomeViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 client_id = old_binome.client.id
+                old_employee_id = old_binome.employee.id
+                
+                # 📝 Enregistrer l'historique de l'ancien intervenant
+                ClientEmployeeHistory.objects.create(
+                    client_id=client_id,
+                    employee_id=old_employee_id,
+                    ended_at=timezone.now()
+                )
                 
                 old_binome.delete()
 

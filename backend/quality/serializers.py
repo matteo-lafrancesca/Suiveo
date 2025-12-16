@@ -27,14 +27,19 @@ class CallTemplateSerializer(serializers.ModelSerializer):
 # --- Événements ---
 class CallSerializer(serializers.ModelSerializer):
     template = CallTemplateSerializer(read_only=True)
+    is_manual = serializers.SerializerMethodField()
 
     class Meta:
         model = Call
         fields = [
             "id", "title", "note", "report",
             "scheduled_date", "actual_date",
-            "template",
+            "template", "is_manual",
         ]
+    
+    def get_is_manual(self, obj):
+        """Un appel est manuel si son template n'a pas d'offset_weeks défini."""
+        return obj.template.offset_weeks is None if obj.template else False
 
 # --- Noyau métier ---
 class BinomeSerializer(serializers.ModelSerializer):
