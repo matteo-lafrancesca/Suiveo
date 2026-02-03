@@ -268,6 +268,8 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import api from "@/services/api";
+import { useBinomeStore } from "@/stores/binome";
+import { getStateColor, getStateIcon } from "@/helpers/binomeHelpers";
 
 // --- IMPORTS COMPOSANTS ---
 import BinomeTimeline from "@/components/BinomeTimeline.vue";
@@ -278,16 +280,20 @@ import ChangeEmployeeDialog from "@/components/ChangeEmployeeDialog.vue";
 import DatePickerField from "@/components/DatePickerField.vue";
 
 const route = useRoute();
-const binome = ref(null);
-const completedCalls = ref([]);
-const pendingCalls = ref([]);
-const nextCall = ref(null);
+const binomeStore = useBinomeStore();
+
+// On utilise computed pour lier les données du store de manière réactive
+const binome = computed(() => binomeStore.binome);
+const completedCalls = computed(() => binomeStore.completedCalls);
+const pendingCalls = computed(() => binomeStore.pendingCalls);
+const nextCall = computed(() => binomeStore.nextCall);
+
 const showHistory = ref(false);
 
 // Refs pour Reprogrammation
 const reprogramDialog = ref(false);
 const newDate = ref("");
-const reprogramReason = ref(""); // <-- NOUVEAU : Motif
+const reprogramReason = ref(""); 
 
 // Gestion des Modales (Refs)
 const showManualCallDialog = ref(false);
@@ -303,26 +309,15 @@ const visibleCalls = computed(() => {
 });
 
 async function fetchBinomeDetails() {
-  try {
-    const id = route.params.id;
-    const { data } = await api.get(`/binomes/${id}/details/`);
-    binome.value = data.binome;
-    completedCalls.value = data.completed_calls || [];
-    pendingCalls.value = data.pending_calls || [];
-    nextCall.value = data.next_call || null;
-  } catch (e) { console.error(e); }
+  await binomeStore.fetchBinomeDetails(route.params.id);
 }
 
 async function markConforme(note) {
-  if (!nextCall.value) return;
-  await api.post(`/calls/${nextCall.value.id}/conforme/`, { note });
-  await fetchBinomeDetails();
+  await binomeStore.markConforme(note);
 }
 
 async function markNonConforme() {
-  if (!nextCall.value) return;
-  await api.post(`/calls/${nextCall.value.id}/non-conforme/`);
-  await fetchBinomeDetails();
+  await binomeStore.markNonConforme();
 }
 
 function openReprogramModal() { 
@@ -384,25 +379,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function getStateColor(state) {
-  switch (state) {
-    case "Conforme": return "success";
-    case "Non conforme": return "error";
-    case "À appeler": return "warning";
-    case "En retard": return "error";
-    default: return "grey";
-  }
-}
 
-function getStateIcon(state) {
-  switch (state) {
-    case "Conforme": return "mdi-check-circle";
-    case "Non conforme": return "mdi-close-circle";
-    case "À appeler": return "mdi-phone";
-    case "En retard": return "mdi-clock-alert";
-    default: return "mdi-help-circle";
-  }
-}
 </script>
 
 <style scoped>

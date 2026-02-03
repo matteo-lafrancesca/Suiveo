@@ -42,11 +42,14 @@
 
       <!-- SECTION DROITE (icônes ou futur menu user) -->
       <div class="d-flex align-center" style="gap: 12px;">
-        <v-btn icon color="primary" variant="text">
-          <v-icon>mdi-bell-outline</v-icon>
-        </v-btn>
-        <v-btn icon color="primary" variant="text">
-          <v-icon>mdi-account-circle-outline</v-icon>
+        <v-btn 
+            icon 
+            color="primary" 
+            variant="text"
+            to="/profil"
+            title="Mon Profil"
+        >
+          <v-icon>mdi-account-circle</v-icon>
         </v-btn>
       </div>
     </div>

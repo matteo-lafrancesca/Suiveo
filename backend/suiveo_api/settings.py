@@ -89,6 +89,17 @@ DATABASES = {
     }
 }
 
+if os.getenv('DATABASE') == 'postgres':
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('SQL_DATABASE'),
+        'USER': os.getenv('SQL_USER'),
+        'PASSWORD': os.getenv('SQL_PASSWORD'),
+        'HOST': os.getenv('SQL_HOST'),
+        'PORT': int(os.getenv('SQL_PORT', 5432)),
+    }
+    print(f"✅ LOADING PROD DATABASE SETTINGS: {DATABASES['default']['NAME']} on {DATABASES['default']['HOST']}:{DATABASES['default']['PORT']}")
+
 
 
 # Password validation
@@ -139,6 +150,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+# URL du Frontend (pour les liens dans les emails)
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

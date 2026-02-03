@@ -369,50 +369,6 @@ class BinomeViewSet(viewsets.ModelViewSet):
             print(f"Erreur changement intervenant: {e}")
             return Response({"error": "Erreur interne."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        """
-        1. Supprime le binôme actuel.
-        2. Crée un nouveau binôme avec le nouvel intervenant.
-        3. Retourne l'ID du nouveau binôme pour redirection.
-        """
-        old_binome = self.get_object()
-        
-        new_employee_id = request.data.get("employee_id")
-        new_start_date_str = request.data.get("start_date")
-        # 👇 AJOUT : On regarde si un nouveau rythme est envoyé, sinon on garde l'ancien
-        new_rhythm = request.data.get("rhythm", old_binome.rhythm)
-
-        if not new_employee_id or not new_start_date_str:
-            return Response({"error": "Intervenant et date de début requis."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            with transaction.atomic():
-                # On sauvegarde les infos client avant de supprimer
-                client_id = old_binome.client.id
-                
-                # 1. Suppression de l'ancien
-                old_binome.delete()
-
-                # 2. Création du nouveau
-                new_data = {
-                    "client_id": client_id,
-                    "employee_id": new_employee_id,
-                    "first_intervention_date": new_start_date_str,
-                    "rhythm": int(new_rhythm) # 👈 AJOUT ICI
-                }
-                
-                new_binome = BinomeService.create_with_first_call(new_data)
-                
-                return Response({
-                    "status": "success", 
-                    "new_binome_id": new_binome.id
-                }, status=status.HTTP_201_CREATED)
-
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print(f"Erreur changement intervenant: {e}")
-            return Response({"error": "Erreur interne."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
     def get_serializer_class(self):
         if self.action == 'list':
             return BinomeEnrichiSerializer

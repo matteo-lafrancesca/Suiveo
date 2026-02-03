@@ -3,6 +3,7 @@ from .employees import EmployeeViewSet
 from .binomes import BinomeViewSet
 from .calls import CallViewSet
 from .call_template import CallTemplateViewSet
+from .dashboard import DashboardViewSet
 
 __all__ = [
     "ClientViewSet",
@@ -10,4 +11,5 @@ __all__ = [
     "BinomeViewSet",
     "CallViewSet",
     "CallTemplateViewSet",
+    "DashboardViewSet",
 ]

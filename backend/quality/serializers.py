@@ -28,6 +28,8 @@ class CallTemplateSerializer(serializers.ModelSerializer):
 class CallSerializer(serializers.ModelSerializer):
     template = CallTemplateSerializer(read_only=True)
     is_manual = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    employee_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Call
@@ -35,11 +37,18 @@ class CallSerializer(serializers.ModelSerializer):
             "id", "title", "note", "report",
             "scheduled_date", "actual_date",
             "template", "is_manual",
+            "binome", "client_name", "employee_name", # 👈 Ajout binome et noms
         ]
     
     def get_is_manual(self, obj):
         """Un appel est manuel si son template n'a pas d'offset_weeks défini."""
         return obj.template.offset_weeks is None if obj.template else False
+
+    def get_client_name(self, obj):
+        return f"{obj.binome.client.last_name.upper()} {obj.binome.client.first_name}" if obj.binome and obj.binome.client else "Client Inconnu"
+
+    def get_employee_name(self, obj):
+        return f"{obj.binome.employee.last_name.upper()} {obj.binome.employee.first_name}" if obj.binome and obj.binome.employee else "Non assigné"
 
 # --- Noyau métier ---
 class BinomeSerializer(serializers.ModelSerializer):
@@ -90,7 +99,6 @@ class BinomeEnrichiSerializer(serializers.ModelSerializer):
     employee_initials = serializers.SerializerMethodField()
     rhythm_display = serializers.SerializerMethodField()
     week_sort_key = serializers.SerializerMethodField()
-    state_color = serializers.SerializerMethodField()
     
     next_call = serializers.SerializerMethodField()
 
@@ -100,7 +108,7 @@ class BinomeEnrichiSerializer(serializers.ModelSerializer):
             'id', 'client', 'employee', 'state', 'rhythm', 
             'next_call',
             'client_name', 'employee_name', 'client_initials', 'employee_initials',
-            'rhythm_display', 'week_sort_key', 'state_color'
+            'rhythm_display', 'week_sort_key'
         ]
 
     def get_next_call(self, obj):
@@ -150,10 +158,3 @@ class BinomeEnrichiSerializer(serializers.ModelSerializer):
         week = next_c['week_number']
         return (year * 100) + week
 
-    def get_state_color(self, obj):
-        if not obj.state: return "grey"
-        s = obj.state.lower()
-        if "non" in s: return "error"
-        if "conforme" in s: return "success"
-        if "appeler" in s or "retard" in s: return "warning"
-        return "grey"

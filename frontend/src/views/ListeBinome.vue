@@ -98,8 +98,8 @@
 
         <template #item.state="{ item }">
           <div class="d-flex align-center" v-if="item.state">
-              <v-icon :color="item.state_color || 'grey'" size="10" class="mr-2">mdi-circle</v-icon>
-              <span class="text-body-2" :class="`text-${item.state_color || 'grey'}`">
+              <v-icon :color="getStateColor(item.state)" size="10" class="mr-2">mdi-circle</v-icon>
+              <span class="text-body-2" :class="`text-${getStateColor(item.state)}`">
                   {{ item.state }}
               </span>
           </div>
@@ -136,6 +136,7 @@
 import { ref, onMounted, computed } from "vue";
 import api from "@/services/api";
 import { useRouter } from "vue-router";
+import { getStateColor } from "@/helpers/binomeHelpers";
 
 const router = useRouter();
 const binomes = ref([]);

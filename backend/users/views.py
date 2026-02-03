@@ -4,12 +4,14 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import check_password
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.utils import timezone
 from datetime import timedelta
+from django.conf import settings
 
 from .serializers import UserSerializer, CreateUserSerializer, InviteSupervisorSerializer, CompleteRegistrationSerializer
 
@@ -44,6 +46,34 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not old_password or not new_password:
+            return Response({"error": "Ancien et nouveau mot de passe requis."}, status=400)
+
+        # Vérification ancien mot de passe
+        if not user.check_password(old_password):
+             return Response({"error": "Ancien mot de passe incorrect."}, status=400)
+
+        # Application nouveau mot de passe
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({"message": "Mot de passe mis à jour avec succès."})
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -82,7 +112,7 @@ class InviteSupervisorView(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             
             # Construct activation link
-            activation_link = f"http://localhost:5173/activate-account?uid={uid}&token={token}"
+            activation_link = f"{settings.FRONTEND_URL}/activate-account?uid={uid}&token={token}"
             
             send_mail(
                 'Activation de votre compte Superviseur',

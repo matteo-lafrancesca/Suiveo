@@ -6,6 +6,7 @@ from .views import (
     BinomeViewSet,
     CallViewSet,
     CallTemplateViewSet,
+    DashboardViewSet,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "BinomeViewSet",
     "CallViewSet",
     "CallTemplateViewSet",
+    "DashboardViewSet",
 ]

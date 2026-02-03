@@ -5,6 +5,7 @@ from .views import (
     BinomeViewSet,
     CallViewSet,
     CallTemplateViewSet,
+    DashboardViewSet,
 )
 
 router = routers.DefaultRouter()
@@ -13,5 +14,6 @@ router.register(r"employees", EmployeeViewSet)
 router.register(r"binomes", BinomeViewSet)
 router.register(r"calls", CallViewSet)
 router.register(r"call-templates", CallTemplateViewSet)
+router.register(r"dashboard", DashboardViewSet, basename="dashboard")
 
 urlpatterns = router.urls

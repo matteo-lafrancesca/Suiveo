@@ -1,5 +1,34 @@
 {
+  "name": "frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.2.8",
+    "@mdi/font": "^7.4.47",
+    "@vue/devtools-kit": "7.3.4",
+    "axios": "^1.12.2",
+    "date-fns": "^4.1.0",
+    "install": "^0.13.0",
+    "jwt-decode": "^4.0.0",
+    "npm": "^11.6.2",
+    "pinia": "^3.0.4",
+    "vite-plugin-vuetify": "^2.1.2",
+    "vue": "^3.5.22",
+    "vue-router": "4",
+    "vue-toastification": "^1.7.14",
     "vuetify": "^3.10.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "5.1.2",
+    "vite": "5.3.5"
   }
 }

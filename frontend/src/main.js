@@ -58,7 +58,7 @@ const vuetify = createVuetify({
     fallback: 'fr',
     messages: { fr },
   },
-  
+
   // ✅ Configuration des dates
   date: {
     locale: {
@@ -79,6 +79,10 @@ const vuetify = createVuetify({
 // --- Création de l'app Vue ---
 const app = createApp(App)
 
+import { createPinia } from 'pinia'
+const pinia = createPinia()
+
+app.use(pinia)
 app.use(vuetify)
 app.use(router)
 app.mount('#app')

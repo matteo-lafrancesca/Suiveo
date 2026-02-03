@@ -49,9 +49,10 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const email = ref("");
 const password = ref("");
@@ -64,20 +65,12 @@ const handleLogin = async () => {
   loading.value = true;
 
   try {
-    const response = await axios.post("http://127.0.0.1:8000/api/login/", {
-      email: email.value,
-      password: password.value,
-    });
-
-    const { access, refresh, user } = response.data;
-    localStorage.setItem("access", access);
-    localStorage.setItem("refresh", refresh);
-    localStorage.setItem("user", JSON.stringify(user));
-
+    await authStore.login(email.value, password.value);
     router.push("/");
   } catch (err) {
     console.error(err);
-    error.value = err.response?.data?.error || "Email ou mot de passe incorrect.";
+    // L'erreur est déjà stockée dans le store ou renvoyée
+    error.value = authStore.error || "Email ou mot de passe incorrect.";
   } finally {
     loading.value = false;
   }

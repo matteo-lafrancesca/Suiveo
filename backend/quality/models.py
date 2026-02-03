@@ -52,11 +52,6 @@ class Binome(models.Model):
     Lien entre un client & un intervenant, avec un état et des métadonnées.
     """
 
-class Binome(models.Model):
-    """
-    Lien entre un client & un intervenant, avec un état et des métadonnées.
-    """
-
     class BinomeState(models.TextChoices):
         CONFORME = "Conforme", "Conforme"
         NON_CONFORME = "Non conforme", "Non conforme"
